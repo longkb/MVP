@@ -1,0 +1,10 @@
+----------------------------------------------------------------
+Tue Jun 09 01:04:36 PDT 2015:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.8.1.2 - (1095077): instance a816c00e-014d-d759-7e22-0000001f8158 
+on database directory /usr/local/share/db/flowvisor/FlowVisorDB  with class loader sun.misc.Launcher$AppClassLoader@d8f55c 
+Loaded from file:/home/nfv/workspace/VNE_EE/lib/derby.jar
+java.vendor=Oracle Corporation
+java.runtime.version=1.7.0_76-b13
+user.dir=/home/nfv/workspace/VNE_EE
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''
