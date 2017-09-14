@@ -2,7 +2,9 @@ package multisite.cluster.model;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
@@ -19,38 +21,43 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 
 /**
  * @author LongKB
  *
  */
 public class Load_Data {
-	public int nNode = 8;
-	public int maxDemand = 80;
-	public int minDemand = 1;
-	public Double alpha = 0.5;
-	public Double beta = 0.5;
+	//Parameters
+	public int nNode;
+	public int maxDemand;
+	public int minDemand;
+	public Double alpha;
+	public Double beta;
 	public String dir = "";
-	public int numLink = 0;
+	public static final int BANDWIDTH = 1000;
+
 	private Database database;
 	private Connection conn;
-	public static final int BANDWIDTH = 1000;
-	public static final int CAPACITY = 100;
 	private double load,tempLoad;
 	private double totalCap,totalBW;
-	private double vNodeReq,vBWReq;
-	private Map<String, Double>vNodes;
-	private LinkedList<String[]>listDemands;
-	private int upTh=800;
-	private int dwTh=300;
+	private double clusterNodeReq,clientBWReq;
+	
+	private int upTh=600, dwTh=200; //Threshold for Bandwidth randomize
+	private int upCap=10,dwCap=6; //Threshold for site capacity randomize
 	private Random rand;
 	public Topology topo;
-	public LinkedList<String>listNode;
-	public double n=1,l=1;
+	public LinkedList<String>listSite;
+	public static double N=1, M=1;
+	
 	public Load_Data() {
 		topo=new Topology();
-		listNode=new LinkedList<String>();
+		listSite=new LinkedList<String>();
 	}
+	
 	public void loadingTopoData(Topology topo, Map<String, Double> linkBandwidth) {
 		Path path = Paths.get(dir + "topo.txt");
 		Charset charset = Charset.forName("US-ASCII");
@@ -120,7 +127,6 @@ public class Load_Data {
 		try {
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("SELECT * FROM NODE");
-//			Name = startnode + " " + endnode + "_" + VNName;
 			Name = VNName;
 			while (rs.next()) {
 				String n = rs.getString(3);
@@ -135,7 +141,6 @@ public class Load_Data {
 				}
 			}
 		} catch (Exception e) {
-			// TODO: handle exception
 			e.printStackTrace();
 		}
 		if(start!=null && end!=null)
@@ -148,261 +153,231 @@ public class Load_Data {
 	}
 
 	@SuppressWarnings("rawtypes")
-	public void CreateNewTopo() {
-		numLink = 0;
-		WaxmanGenerator waxman = new WaxmanGenerator();
-		try {
-			Map<String, String> graph = new HashMap<String, String>();
-			Path file = Paths.get(dir + "topo.txt");
-			try {
-				Files.delete(file);
-			} catch (NoSuchFileException x) {
-				System.err.format("%s: no such" + " file or directory%n", file);
-			} catch (DirectoryNotEmptyException x) {
-				System.err.format("%s not empty%n", file);
-			} catch (IOException x) {
-				// File permission problems are caught here.
-				System.err.println(x);
-			}
-			try {
-				Files.createFile(file);
+	public JSONObject createMultiSiteTopo() {
+		WaxmanGenerator waxman = new WaxmanGenerator(0.0,100.0, 0.0, 100.0);
 
-			} catch (IOException x) {
-				System.err.println(x);
-			}
-			Charset charset = Charset.forName("US-ASCII");
-			BufferedWriter writer = Files.newBufferedWriter(file, charset);
-			graph = waxman.Waxman(nNode, BANDWIDTH, alpha, beta);
-			Iterator entries = graph.entrySet().iterator();
-			String S,E;
-			Map<String, Double>nodes=new HashMap<String, Double>();
-			Random rand=new Random();
-			int upCap=6,dwCap=3;
-			double srcCap,dstCap;
-			while (entries.hasNext()) {
-				Map.Entry entry = (Map.Entry) entries.next();
-				String link = (String) entry.getKey();
-				S=link.split(" ")[0];
-				E=link.split(" ")[1];
-				if(!nodes.containsKey(S)){
-					srcCap=rand.nextInt(upCap-dwCap)*2*10+dwCap*2*10;
-					nodes.put(S,srcCap);
-					totalCap+=srcCap;
-				}else
-					srcCap=nodes.get(S);
-				if(!nodes.containsKey(E)){
-					dstCap=rand.nextInt(upCap-dwCap)*2*10+dwCap*2*10;
-					nodes.put(E,dstCap);
-					totalCap+=dstCap;
-				}else 
-					dstCap=nodes.get(E);
-				
-				String bw = (String) entry.getValue();
-				String line = link + " " + bw + " " + srcCap + " " + dstCap+'\n';
-				writer.write(line);
-				numLink++;
-				
-				topo.addNeighbor(S, E);
-			}
-			writer.close();
-			for(String node:nodes.keySet()){
-				if (topo.nNeighbors(node)==0){
-//					System.out.println(node);
-					continue;
-				}
-				listNode.add(node);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
+		JSONObject graph;
+		graph = waxman.Waxman(nNode, BANDWIDTH, alpha, beta);
+		
+		String ID, S, D;
+		Map<String, Double>sites=new HashMap<String, Double>();
+		Random rand=new Random();
+		double capacity;
+
+		JSONObject siteArr = (JSONObject) graph.get("Site");
+		Iterator<JSONObject> siteIterator=siteArr.values().iterator();
+		JSONObject entry;
+		while (siteIterator.hasNext()) {
+			entry= siteIterator.next();
+			ID=(String)entry.get("ID");
+			capacity=rand.nextInt(upCap-dwCap)*2*10+dwCap*2*10;
+			entry.put("Capacity", capacity);
+			sites.put(ID,capacity);
+			totalCap+=capacity;
 		}
+
+		JSONObject linkArr = (JSONObject) graph.get("Link");
+		Iterator<JSONObject> linkIterator=linkArr.values().iterator();
+		while (linkIterator.hasNext()) {
+			entry = linkIterator.next();
+			S=(String)entry.get("src");
+			D=(String)entry.get("dst");
+			
+			//Add neighbour cho node S
+			JSONObject srcNode=(JSONObject) siteArr.get(S);
+			JSONArray neighbor=(JSONArray) srcNode.get("Neighbor");
+			if (!neighbor.contains(D)) {
+				neighbor.add(D);
+			}
+			topo.addNeighbor(S, D);
+		}
+		//Write Topo to a text file
+		writeToFile(graph, dir+"multisiteTopo.txt");
+		
+		for(String site:sites.keySet()){
+			if (topo.nNeighbors(site)==0)
+				continue;
+			listSite.add(site);
+		}
+		return graph;
 	}
 	public int i=0;
-	public void createDemand(){
-		listDemands=new LinkedList<String[]>();
-		vNodes=new HashMap<String, Double>();
+	@SuppressWarnings("unchecked")
+	public JSONObject createClusterDemand(JSONObject graph){
+		JSONObject clusterRequestList=new JSONObject();
+		
+		//Number of links in graph
+		int nLinks=((JSONObject)graph.get("Link")).size();
+		int nSites=((JSONObject)graph.get("Site")).size();
+				
 		load=(double)maxDemand/100;
 		tempLoad=0;
-//		totalCap=
-//		totalCap=nNode*CAPACITY;
-		totalBW=(numLink-nNode)/2*BANDWIDTH;
-//		System.out.println("Load: "+load);
-//		System.out.println("Capacity "+totalCap);
-//		System.out.println("Bandwidth "+totalBW);
-		vNodeReq=0;
-		vBWReq=0;
+		//Mỗi link giữa 2 site có băng thông là BANDWIDTH, mỗi site có thêm 1 link ra ngoài external với băng thông là Bandwidth
+		totalBW=nLinks/2*BANDWIDTH + nSites*BANDWIDTH; 
+		
+		clusterNodeReq=0;
+		clientBWReq=0;
+		
+		//MIN MAX Tọa độ của client
+		double xmax=100.0;
+		double xmin=0;
+		double ymax=100.0;
+		double ymin=0.0;
 		
 		rand= new Random();
-		//Get listNode
+		int nCluster=0;
 		while (true) {
-			if (genDemand("VN"+String.valueOf(rand.nextInt(3)+1))) {
+			nCluster+=1;
+			String clusterName="Cluster0"+String.valueOf(nCluster);
+			//Tạo JSON để lưu cluster request từ client
+			JSONObject clusterJSON=new JSONObject();
+			clusterJSON.put("Name", clusterName);
+			
+			//Tạo JSON để lưu tọa độ XY của client
+			JSONObject clientXYJSON=new JSONObject();
+			clusterJSON.put("client", clientXYJSON);
+			
+			//Tạo JSON để lưu cấu hình của cluster
+			JSONObject configurationJSON=new JSONObject();
+			clusterJSON.put("Configuration", configurationJSON);
+			
+			//Thêm clusterJSON vào list
+			clusterRequestList.put(clusterName, clusterJSON);
+			
+			//Sinh random tọa độ cho client
+			clientXYJSON.put("X", (xmax-xmin)*rand.nextDouble());
+			clientXYJSON.put("Y", (ymax-ymin)*rand.nextDouble());
+
+			if (genClusterDemand(clusterName, configurationJSON)) {
 				break;
 			}
 		}
-		writeToFile();
+		System.out.println("\nBandwidth: "+clientBWReq);
+		System.out.println("Total BW: "+totalBW);
+		System.out.println("Capacity: "+clusterNodeReq);
+		System.out.println("Total Cap: "+totalCap);
+		System.out.println("BW ratio: "+ clientBWReq/totalBW);
+		System.out.println("Cap ratio: "+ clusterNodeReq/totalCap);
+		
+		writeToFile(clusterRequestList, dir+"clusterDemand.txt");
+		return clusterRequestList;
 	}
-	public double getLoad(double vNodeReq,double vBWReq){
-		return (n*vNodeReq/totalCap+l*vBWReq/totalBW)/(n+l);
+	public double getLoad(double clusterNodeReq,double clientBWReq){
+		return (N*clusterNodeReq/totalCap + M*clientBWReq/totalBW)/(N + M);
 	}
-	public boolean genDemand(String VNName){
+	/*
+	 * Generate a new demand with specific Name
+	 */
+	@SuppressWarnings("unchecked")
+	public boolean genClusterDemand(String clusterName, JSONObject configurationJSON){
 		i=0;
-		double srcReq,dstReq, newLoad;
-		boolean srcCheck=false,dstCheck=false;
-		int nNode=listNode.size();
-//		System.out.println(listNode);
-		if(nNode==0){
-			System.out.println("There are not any link in Topo");
-			return true;
-		}
-		String srcNode = listNode.get(rand.nextInt(nNode));
-		String dstNode = listNode.get(rand.nextInt(nNode));
-		if (srcNode.equals(dstNode))
-			return false;
-		
-		tempLoad=getLoad(vNodeReq, vBWReq);
-		
-		int BWReq = (rand.nextInt(upTh+10-dwTh)/10+dwTh/10)*10;
-//		System.out.println(BWReq);
-		vBWReq+=BWReq;
-		if (vNodes.containsKey(srcNode+"_"+VNName)==false) {
-			srcReq=10*(rand.nextInt(4)+1);
-			vNodeReq+=srcReq;
-			vNodes.put(srcNode+"_"+VNName, srcReq);
-			srcCheck=true;
-		}else{
-			srcReq=vNodes.get(srcNode+"_"+VNName);
-			srcCheck=false;
-		}
-		if (vNodes.containsKey(dstNode+"_"+VNName)==false) {
-			dstReq=10*(rand.nextInt(4)+1);
-			vNodeReq+=dstReq;
-			vNodes.put(dstNode+"_"+VNName, dstReq);
-			dstCheck=true;
-		}else{
-			dstReq=vNodes.get(dstNode+"_"+VNName);
-			dstCheck=false;
-		}
-		
-		newLoad=getLoad(vNodeReq,vBWReq);
-		if(newLoad==load){
-			addNewDemand(srcNode, dstNode, BWReq, srcReq, dstReq, VNName);
-			return true;
-		}
-		if(load-tempLoad<10/totalBW/2){
-			return true;
-		}
-		if (newLoad > load) {
-			vBWReq=vBWReq-BWReq;
+		//Ngưỡng để random số active, standby node
+		int upTh_nNodes=4;
+		int upNodeCapTh=4; //Up threshold is 30
+		int nActive;
+		int nStandby;
+		double srcReq, dstReq, newLoad;
+		int nSite=listSite.size();
 
-			if (srcCheck) {
-				vNodes.remove(srcNode+"_"+VNName);
-				vNodeReq=vNodeReq-srcReq;
-			}
-			if (dstCheck) {
-				vNodes.remove(dstNode+"_"+VNName);
-				vNodeReq=vNodeReq-dstReq;
-			}
+		//Random số active, standby node trong cluster
+		nActive=rand.nextInt(upTh_nNodes)+1;
+		nStandby=rand.nextInt(nActive)+1;
+
+		tempLoad=getLoad(clusterNodeReq, clientBWReq); //load trước khi sinh demand
+		//Nếu độ chênh lệch của load hiện tại và load đặt ra quá nhỏ, bỏ qua, ko cần tạo thêm demand nữa
+		if(load-tempLoad<10/totalBW/2){ 
+			return true;
+		}
+		
+		double reqBW = getRandomBandwidth(upTh,dwTh); //Băng thông request từ client đến active node
+		double syncBW = getRandomBandwidth((int)reqBW,dwTh/2); //băng thông dùng cho state transfer từ active đến standby
+		clientBWReq+=(reqBW+syncBW)*nActive;
+		
+		int nodeCap=getRandomNodeCapacity(upNodeCapTh); //Sinh random capacity request cho các node trong cluster
+		clusterNodeReq+=(nActive+nStandby)*nodeCap; 
+		
+		newLoad=getLoad(clusterNodeReq,clientBWReq);  //Load sau khi sinh demand
+		//Nếu load mới bằng load đặt ra, thêm demand thành công
+		if(newLoad==load){ 
+			addNewDemand(configurationJSON, nActive, nStandby, nodeCap, reqBW, syncBW);
+			return true;
+		}
+		//Nếu load mới lớn hơn load đặt ra, loại bỏ demand vừa rồi. Update lại load cũ bằng cách thêm 1 lượng BW vào các req BW
+		if (newLoad > load) { 
+			clientBWReq=clientBWReq-(reqBW+syncBW)*nActive;
+			clusterNodeReq=clusterNodeReq-(nActive+nStandby)*nodeCap;
+
 			double BW=0;
 			while(BW<=0 || BW>upTh){
 				if (i>50) {
-					return false;
+					return true;
 				}
-//				System.out.println("Newload "+newLoad+"  Load "+load+"  tempLoad "+tempLoad+"  size "+listDemands.size()+" Cap "+totalBW);
-				//Gen random Node
-				srcNode = listNode.get(rand.nextInt(nNode));
-				dstNode = listNode.get(rand.nextInt(nNode));
-				double deltaNode=0;
-				if (srcNode.equals(dstNode))
-					continue;
-				//Gen node Req
-				if (vNodes.containsKey(srcNode+"_"+VNName)==false) {
-					srcReq=10*(rand.nextInt(4)+1);
-					vNodeReq+=srcReq;
-					vNodes.put(srcNode+"_"+VNName, srcReq);
-					deltaNode=deltaNode+srcReq;
-					srcCheck=true;
-				}else{
-					srcReq=vNodes.get(srcNode+"_"+VNName);
-					srcCheck=false;
-				}
-				if (vNodes.containsKey(dstNode+"_"+VNName)==false) {
-					dstReq=10*(rand.nextInt(4)+1);
-					vNodeReq+=dstReq;
-					vNodes.put(dstNode+"_"+VNName, dstReq);
-					deltaNode=deltaNode+dstReq;
-					dstCheck=true;
-				}else{
-					dstReq=vNodes.get(dstNode+"_"+VNName);
-					dstCheck=false;
-				}
+				//Random số active, standby node trong cluster
+				nActive=rand.nextInt(upTh_nNodes)+1;
+				nStandby=rand.nextInt(nActive)+1;
+
+				nodeCap=getRandomNodeCapacity(upNodeCapTh); //Sinh random capacity request cho các node trong cluster
+				double deltaNode=nodeCap*(nActive+nStandby);
+				
 				//Gen random BWReq
 				double delta=load-tempLoad;
-//				System.out.println("Delta "+delta);
-//				System.out.println("Them vao node req "+deltaNode);
-//				System.out.println("Them vao node req "+deltaNode/totalCap);
-				BW=(delta*(n+l)-n*deltaNode/totalCap)/l*totalBW;
-				BW=(double)((int)(BW/10)*10);
-//				System.out.println("Bu them "+BW);
-				if (BW>0 && BW<=upTh) {
-//					System.out.println("BW: "+BW);
-					vBWReq=vBWReq+BW;
-					addNewDemand(srcNode, dstNode, BW, srcReq, dstReq, VNName);
+				BW=(delta*(N+M)-N*deltaNode/totalCap)/M*totalBW;
+				
+				reqBW=BW/(2*nActive);
+				syncBW=BW/(2*nActive);
+				reqBW=(double)((int)(reqBW/10)*10); //Làm tròn
+				syncBW=(double)((int)(syncBW/10)*10); //Làm tròn
+
+				clientBWReq+=(reqBW+syncBW)*nActive;
+				clusterNodeReq+=(nActive+nStandby)*nodeCap; 
+				
+				if (reqBW>0 && reqBW<=upTh) {
+					addNewDemand(configurationJSON, nActive, nStandby, nodeCap, reqBW, syncBW);
 					break;
 				}else if (BW==0) {
 					break;
 				}else {
 					i++;
-					if (srcCheck) {
-						vNodes.remove(srcNode+"_"+VNName);
-						vNodeReq=vNodeReq-srcReq;
-					}
-					if (dstCheck) {
-						vNodes.remove(dstNode+"_"+VNName);
-						vNodeReq=vNodeReq-dstReq;
-					}
+					clientBWReq=clientBWReq-(reqBW+syncBW)*nActive;
+					clusterNodeReq=clusterNodeReq-(nActive+nStandby)*nodeCap;
 				}
 			}
-//			System.out.println("Req BW: "+BW);
 			return true;
 		}
-		addNewDemand(srcNode, dstNode, BWReq, srcReq, dstReq, VNName);
+		addNewDemand(configurationJSON, nActive, nStandby, nodeCap, reqBW, syncBW);
 		return false;
 	}
-	public void addNewDemand(String srcNode,String dstNode,double BWReq,double srcReq,double dstReq,String VNName){
-		String[]data=new String[6];
-		data[0]=String.valueOf(srcNode);
-		data[1]=String.valueOf(dstNode);
-		data[2]=String.valueOf(BWReq);
-		data[3]=String.valueOf(srcReq);
-		data[4]=String.valueOf(dstReq);
-		data[5]=VNName;
-		listDemands.add(data);
+	/*
+	 * Return random node capacity according to Up threshold input
+	 */
+	public int getRandomNodeCapacity(int upNodeCapTh) {
+		return 10*(rand.nextInt(upNodeCapTh)+1);
 	}
-	public void writeToFile(){
+	/*
+	 * Return random Bandwidth request according to Up and down threshold input
+	 */
+	public int getRandomBandwidth(int upTh, int dwTh) {
+		return (rand.nextInt(upTh+10-dwTh)/10+dwTh/10)*10;
+	}
+	@SuppressWarnings("unchecked")
+	public void addNewDemand(JSONObject configJSON, int nActive, int nStandby, int nodeCap, double reqBW, double syncBW){
+		configJSON.put("Active", nActive);
+		configJSON.put("Standby", nStandby);
+		configJSON.put("reqCapacity", nodeCap);
+		configJSON.put("reqBW", reqBW);
+		configJSON.put("syncBW", syncBW);
+	}
+	public void writeToFile(JSONObject inputJSON, String fileDir){
+		FileWriter fw;
 		try {
-			Path file = Paths.get(dir + "demand.txt");
-			try {
-				Files.delete(file);
-			} catch (NoSuchFileException x) {
-				System.err.format("%s: no such" + " file or directory%n", file);
-			} catch (DirectoryNotEmptyException x) {
-				System.err.format("%s not empty%n", file);
-			} catch (IOException x) {
-				System.err.println(x);
-			}
-			try {
-				Files.createFile(file);
-
-			} catch (IOException x) {
-				System.err.println(x);
-			}
-			Charset charset = Charset.forName("US-ASCII");
-			BufferedWriter writer = Files.newBufferedWriter(file, charset);
-			for(String[]s:listDemands){
-				String demand=s[0]+" "+s[1]+" "+s[2]+" "+s[3]+" "+s[4]+" "+s[5]+"\n";
-				//System.out.print(demand);
-				writer.write(demand);
-			}
-			writer.close();
+			fw = new FileWriter(fileDir);
+			//Erase all of content in filePath
+			PrintWriter pw=new PrintWriter(fw);
+			pw.write("");
+			//Write a new JSONObject in filePath
+			fw.write(inputJSON.toJSONString());
+			pw.flush();
+			pw.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

@@ -22,6 +22,7 @@ public class Topology {
 	@SuppressWarnings("unused")
 	public Map<String, Double>linkBandwidth;
 	public LinkedList<String> forgetLink;
+	
 	public Topology(Connection conn) {
 		database=new Database();
 		this.conn=conn;
@@ -29,13 +30,15 @@ public class Topology {
 		linkBandwidth=new HashMap<String,Double>();
 		forgetLink=new LinkedList<String>();
 	}
+	
 	public Topology() {
 		database=new Database();
-		conn=database.connect();
+//		conn=database.connect();
 		map=new HashMap<String, LinkedHashSet<String>>();
 		linkBandwidth=new HashMap<String,Double>();
 		forgetLink=new LinkedList<String>();
 	}
+	
 	public void addEdge(String node1,String node2){
 		LinkedHashSet<String>neighbor=map.get(node1);
 		if (neighbor==null) {

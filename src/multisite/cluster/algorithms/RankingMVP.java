@@ -16,8 +16,8 @@ import java.util.Map.Entry;
 
 import multisite.cluster.model.Database;
 
-public class Multi_EE extends Algorithm_EE {
-	public Multi_EE() {
+public class RankingMVP extends Algorithm_EE {
+	public RankingMVP() {
 		// TODO Auto-generated constructor stub
 		super();
 	}

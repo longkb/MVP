@@ -22,8 +22,8 @@ public class Database {
 	public Connection connect(){
 		try {
 			connectMySQL();
-			System.out.println("Connect");
 //			connectRazor();
+//			System.out.println("Connect");
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -48,7 +48,7 @@ public class Database {
 	 * @throws SQLException 
 	 */
 	public void connectMySQL() throws SQLException{
-		conn=DriverManager.getConnection("jdbc:mysql://192.168.11.216:8888/sdn", "root", "lovedcn");
+		conn=DriverManager.getConnection("jdbc:mysql://127.0.0.1:8888/sdn", "root", "lovedcn");
 	}
 	public void disconnect() {
 		try {
