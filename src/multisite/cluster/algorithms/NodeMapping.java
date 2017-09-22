@@ -33,8 +33,8 @@ public class NodeMapping {
 	public HashMap<String, VirtualNode> vNodes;
 
 	public NodeMapping() {
-		db = new Database();
-		conn = db.connect();
+//		db = new Database();
+//		conn = db.connect();
 	}
 
 	public void initial() {

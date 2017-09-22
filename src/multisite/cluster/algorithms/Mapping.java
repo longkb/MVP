@@ -59,8 +59,8 @@ public class Mapping {
 				clusterDemand=load_data.createClusterDemand(graph);
 				System.out.print("-");
 
-//				mapping.runSingleHEE_BFS(nTime, nNodes, alpha, beta);
-//				mapping.runMultiHEE_BFS(nTime, nNodes, alpha, beta);
+//				mapping.runSingleHEE_BFS(graph, clusterDemand);
+				mapping.runMultiHEE_BFS(graph, clusterDemand);
 
 //				mapping.database.disconnect();  //Test ko DB
 				// if(check1 < check4)
@@ -82,17 +82,17 @@ public class Mapping {
 		System.out.println("Done ");
 	}
 
-	public void runSingleHEE_BFS(int n, int node, Double alpha, Double beta) {
+	public void runSingleHEE_BFS(JSONObject graph, JSONObject clusterDemand) {
 		// System.out.println("Neighbor mapping ");
 		algorithmSingleHEE = new Single_EE();
-		ratioSingleHEE_BFS = ratioSingleHEE_BFS + algorithmSingleHEE.MappingSingleHEE_BFS();
+		ratioSingleHEE_BFS += algorithmSingleHEE.MappingSingleHEE_BFS();
 //		PSingleHEE_BFS = PSingleHEE_BFS + h / netFPGA.powerFullMesh(load_data.numLink, node);
 	}
 
-	public void runMultiHEE_BFS(int n, int node, Double alpha, Double beta) {
+	public void runMultiHEE_BFS(JSONObject graph, JSONObject clusterDemand) {
 		// System.out.println("Neighbor mapping ");
 		algorithmRankingMVP = new RankingMVP();
-		ratioRankingMVP = ratioRankingMVP + algorithmRankingMVP.MappingMultiHEE_BFS();
+		ratioRankingMVP += algorithmRankingMVP.MappingRankingMVP(graph, clusterDemand);
 		//linkUtilRankingMVP = linkUtilRankingMVP + h / netFPGA.powerFullMesh(load_data.numLink, node);
 	}
 }

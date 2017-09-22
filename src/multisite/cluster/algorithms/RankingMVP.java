@@ -14,11 +14,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.json.simple.JSONObject;
+
 import multisite.cluster.model.Database;
 
 public class RankingMVP extends Algorithm_EE {
 	public RankingMVP() {
-		// TODO Auto-generated constructor stub
 		super();
 	}
 	@SuppressWarnings("unchecked")
@@ -106,8 +107,8 @@ public class RankingMVP extends Algorithm_EE {
 		return ratio;
 	}
 	
-	public Double MappingMultiHEE_BFS() {
-		initial();
+	public Double MappingRankingMVP(JSONObject graph, JSONObject clusterDemand) {
+		initial(graph);
 		nodemapping.nodeMappingNeighborID();
 		loadData.convertDemand(saveName);
 		LinkedList<String> listPaths;
@@ -134,7 +135,6 @@ public class RankingMVP extends Algorithm_EE {
 					psDelete.executeUpdate();
 					removeDemand(SE, sliceName, vLink);
 				} catch (SQLException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				continue;

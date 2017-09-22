@@ -18,11 +18,11 @@ import multisite.cluster.model.SubStrateNode;
 import multisite.cluster.model.VirtualNet;
 import multisite.cluster.model.VirtualNode;
 
-public class NodeMappingHEE extends NodeMappingNeighbor{
+public class NodeMappingMVP extends NodeMappingNeighbor{
 	/**
 	 * Hàm tạo
 	 */
-	public NodeMappingHEE() {
+	public NodeMappingMVP() {
 		super();
 	}
 

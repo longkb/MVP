@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
+import org.json.simple.JSONObject;
+
 import multisite.cluster.model.BFS;
 import multisite.cluster.model.Database;
 import multisite.cluster.model.Load_Data;
@@ -23,7 +25,6 @@ public class Algorithm_EE {
 	public static final String NODE_1G = "1";
 	public static final String NODE_10_100 = "2";
 	public static final String NODE_IDLE = "3";
-	public modelNetFPGA fpga;
 	public Database database;
 	public String sliceName;
 	public String vLink;
@@ -35,32 +36,35 @@ public class Algorithm_EE {
 	public Map<String, Double> linkBandwidth;
 	public String SE;
 	public double demand, srcreq, dstreq;
-	public NodeMappingHEE nodemapping;
+	public NodeMappingMVP nodemapping;
 	public double ratio=0;
 	public Map<String, String> saveName;
 	public boolean check;
 	public Map<String, Integer> listdemand;
 	public int nFlow = 4;
+	
+	private JSONObject graph;
 	public Algorithm_EE() {
-		database = new Database();
-		conn = database.connect();
+//		database = new Database();
+//		conn = database.connect();
 	}
 
-	public void initial() {
+	public void initial(JSONObject graph) {
+		nodemapping = new NodeMappingMVP();
+		
 		linkBandwidth = new HashMap<String, Double>();
 		saveName= new HashMap<String, String>();
-		fpga = new modelNetFPGA();
-		topo = new Topology(conn);
+		topo = new Topology();
 		check=false;
-		nodemapping = new NodeMappingHEE();
-		database.resetDatabase();
+		database.resetDatabase(); //Check again
+		
+		this.graph=graph;
 		loadData = new Load_Data();
-		loadData.loadingTopoData(topo, linkBandwidth);
+		loadData.loadDataFromGraph2Topo(this.graph, topo, linkBandwidth);
 		nodemapping.topology=loadData.topo;
 	}
 
 	public double MappingEnergy() {
-//		System.out.println("sdjshd");
 		initial();
 		nodemapping.nodeMapping();
 		loadData.convertDemand(saveName);
@@ -70,7 +74,6 @@ public class Algorithm_EE {
 		String currentPath = "";
 		double totalDemand = numberOfRecord("DEMANDNEW");
 		while (numberOfRecord("DEMANDNEW") != 0) {
-//			System.out.println("sjhfjs");
 			saveTempNodeState(stateNode);
 			getDemand();
 			if(srcreq !=0 || dstreq!=0)
@@ -87,7 +90,6 @@ public class Algorithm_EE {
 				try {
 					psDelete = conn
 							.prepareStatement("DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
-
 					psDelete.setString(1, SE);
 					psDelete.setString(2, sliceName);
 					psDelete.setString(3, vLink);

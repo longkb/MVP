@@ -204,71 +204,6 @@ public class Topology {
 		return forgetLink;
 	}
 	
-//	public void updateTopoState(){
-//		String startNode,endNode;
-//
-//		Iterator<Entry<String, LinkedHashSet<String>>>iter=map.entrySet().iterator();
-//		while(iter.hasNext()){
-//			Entry<String, LinkedHashSet<String>>entry=iter.next();
-//			startNode=entry.getKey();
-//			LinkedHashSet<String>neighbor=map.get(startNode);
-//			Iterator<String>iterNeighbor=neighbor.iterator();
-//
-//			while (iterNeighbor.hasNext()) {
-//				endNode=iterNeighbor.next();
-//				if(startNode.equals(endNode))
-//					continue;
-//				updateLinkState(startNode,endNode);
-//			}
-//		}
-//	}
-	
-//	public void updateLinkState(String startNode,String endNode){
-//		Statement stmt;
-//		Double Demand =0.0;
-//		String SE=startNode+endNode;
-//		String ES=endNode+startNode;
-//		try {
-//			stmt = conn.createStatement();
-//			ResultSet rs=stmt.executeQuery("SELECT * FROM PATH");
-//			PreparedStatement psDelete=conn.prepareStatement("DELETE FROM AVBW WHERE LINK =(?)");
-//			PreparedStatement psInsert=conn.prepareStatement("INSERT INTO AVBW VALUES (?,?,?)");
-//			
-//			BW=getBWOfLink(SE);
-//			while (rs.next()) {
-//				
-//				String path=rs.getString(1);
-//				double demand=rs.getDouble(3);
-//				if(path.contains(SE)||path.contains(ES)){
-//					//BW=BW-demand;
-//					Demand=Demand+demand;
-//				}
-//			}
-//			
-//			psDelete.setString(1, SE);
-//			psDelete.executeUpdate();
-//			psInsert.setString(1, SE);
-//			psInsert.setDouble(2, BW);
-//			psInsert.setDouble(3, Demand);
-//			psInsert.executeUpdate();
-//			BW=0.0;
-//		} catch (SQLException e) {
-//			e.printStackTrace();
-//		}
-//		
-//	}
-//	public double getBWOfLink(String link){
-//		double bandwidth=0.0;
-//		try {
-//			Statement stmt=conn.createStatement();
-//			ResultSet rs=stmt.executeQuery("SELECT * FROM LINKBW WHERE LINK='"+link+"'");
-//			rs.next();
-//			bandwidth=rs.getDouble(2);
-//		} catch (SQLException e) {
-//			e.printStackTrace();
-//		}
-//		return bandwidth;
-//	}
 	public void addForgetLink(String link){
 		forgetLink.add(link);
 	}
@@ -300,9 +235,7 @@ public class Topology {
 			rs.next();
 			//String sliceName=rs.getString(1);
 			PreparedStatement psDelete=conn.prepareStatement("DELETE FROM DEMANDNEW WHERE SE=(?) AND SLICENAME=(?)");
-//			PreparedStatement psDelete=conn.prepareStatement("DELETE FROM DEMAND WHERE SE=(?)");
 			if(demand==0.0){
-				//System.out.println("******"+SE+"***"+sliceName+"***"+demand);
 				psDelete.setString(1, SE);
 				psDelete.setString(2, sliceName);
 				psDelete.executeUpdate();

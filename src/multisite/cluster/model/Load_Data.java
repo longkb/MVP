@@ -58,9 +58,8 @@ public class Load_Data {
 		listSite=new LinkedList<String>();
 	}
 	
-	public void loadingTopoData(Topology topo, Map<String, Double> linkBandwidth) {
-		Path path = Paths.get(dir + "topo.txt");
-		Charset charset = Charset.forName("US-ASCII");
+	public void loadDataFromGraph2Topo(JSONObject graph, Topology topo, Map<String, Double> linkBandwidth) {
+
 		LinkedList<String> listnode = new LinkedList<String>();
 		try (BufferedReader reader = Files.newBufferedReader(path, charset)) {
 			String line = null;
@@ -251,6 +250,10 @@ public class Load_Data {
 			if (genClusterDemand(clusterName, configurationJSON)) {
 				break;
 			}
+			//Trường hợp số Active bằng 0. Xóa JSONObject của cluster vừa thêm vào
+			if(configurationJSON.get("Active")==null) {
+				clusterRequestList.remove(clusterName);
+			}
 		}
 		System.out.println("\nBandwidth: "+clientBWReq);
 		System.out.println("Total BW: "+totalBW);
@@ -273,7 +276,8 @@ public class Load_Data {
 		i=0;
 		//Ngưỡng để random số active, standby node
 		int upTh_nNodes=4;
-		int upNodeCapTh=4; //Up threshold is 30
+		int upNodeCapTh=4; //Up threshold is 50
+		int dwNodeCapTh=2;
 		int nActive;
 		int nStandby;
 		double srcReq, dstReq, newLoad;
@@ -293,7 +297,7 @@ public class Load_Data {
 		double syncBW = getRandomBandwidth((int)reqBW,dwTh/2); //băng thông dùng cho state transfer từ active đến standby
 		clientBWReq+=(reqBW+syncBW)*nActive;
 		
-		int nodeCap=getRandomNodeCapacity(upNodeCapTh); //Sinh random capacity request cho các node trong cluster
+		int nodeCap=getRandomNodeCapacity(upNodeCapTh, dwNodeCapTh); //Sinh random capacity request cho các node trong cluster
 		clusterNodeReq+=(nActive+nStandby)*nodeCap; 
 		
 		newLoad=getLoad(clusterNodeReq,clientBWReq);  //Load sau khi sinh demand
@@ -316,7 +320,7 @@ public class Load_Data {
 				nActive=rand.nextInt(upTh_nNodes)+1;
 				nStandby=rand.nextInt(nActive)+1;
 
-				nodeCap=getRandomNodeCapacity(upNodeCapTh); //Sinh random capacity request cho các node trong cluster
+				nodeCap=getRandomNodeCapacity(upNodeCapTh, dwNodeCapTh); //Sinh random capacity request cho các node trong cluster
 				double deltaNode=nodeCap*(nActive+nStandby);
 				
 				//Gen random BWReq
@@ -350,8 +354,8 @@ public class Load_Data {
 	/*
 	 * Return random node capacity according to Up threshold input
 	 */
-	public int getRandomNodeCapacity(int upNodeCapTh) {
-		return 10*(rand.nextInt(upNodeCapTh)+1);
+	public int getRandomNodeCapacity(int upNodeCapTh, int dwNodeCapTh) {
+		return 10*(rand.nextInt(upNodeCapTh-dwNodeCapTh)+dwNodeCapTh);
 	}
 	/*
 	 * Return random Bandwidth request according to Up and down threshold input
