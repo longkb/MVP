@@ -14,7 +14,7 @@ import java.util.Map.Entry;
 
 import multisite.cluster.model.Database;
 
-public class Single_EE extends Algorithm_EE {
+public class Single_EE extends MVP_Algorithm {
 	int num;
 
 	public Single_EE() {

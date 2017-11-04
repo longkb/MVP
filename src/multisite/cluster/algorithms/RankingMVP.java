@@ -18,10 +18,91 @@ import org.json.simple.JSONObject;
 
 import multisite.cluster.model.Database;
 
-public class RankingMVP extends Algorithm_EE {
+public class RankingMVP extends MVP_Algorithm {
 	public RankingMVP() {
 		super();
 	}
+
+	public Double MappingRankingLB_MVP(JSONObject graph, JSONObject clusterDemand) {
+		initial(graph);
+		nodemapping.nodeMappingNeighborID();
+		loadData.convertDemand(saveName);
+		LinkedList<String> listPaths;
+		Map<String, Integer> listPathsNodeTurnOn = new HashMap<String, Integer>();
+		String currentPath = "";
+		double totalDemand = numberOfRecord("DEMANDNEW");
+		while (numberOfRecord("DEMANDNEW") != 0) {
+			getDemand();
+			if (srcreq != 0 || dstreq != 0) {
+				removeDemand(SE, sliceName, vLink);
+				continue;
+			}
+			updatePath2DB(SE, demand, topo, sliceName, vLink);
+			listPaths = getListPaths();
+			if (listPaths.size() == 0) {
+				PreparedStatement psDelete;
+				try {
+					psDelete = conn
+							.prepareStatement("DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
+					psDelete.setString(1, SE);
+					psDelete.setString(2, sliceName);
+					psDelete.setString(3, vLink);
+					returnBandwidth(SE, sliceName, vLink);
+					psDelete.executeUpdate();
+					removeDemand(SE, sliceName, vLink);
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+				continue;
+			}
+			// listPathsNodeTurnOn = sortByValues(listPathNodeTurnOn(listPaths));
+			// System.out.println(listPathsNodeTurnOn);
+			// Iterator<Entry<String, Integer>> iter = listPathsNodeTurnOn
+			// .entrySet().iterator();
+			// while (iter.hasNext()) {
+			for (int i = 0; i < listPaths.size(); i++) {
+				currentPath = listPaths.get(i);
+				Double mindemand = minBWSE(currentPath);
+				if (mindemand > 0) {
+					if (mindemand >= demand) {
+						updateMappingData(currentPath, SE, demand, sliceName, vLink);
+						updatePort(currentPath, demand);
+						updateNode(currentPath, demand);
+						CopyDataBase();
+						removeDemand(SE, sliceName, vLink);
+						demand = 0;
+						break;
+					} else {
+						updateMappingData(currentPath, SE, mindemand, sliceName, vLink);
+						updatePort(currentPath, mindemand);
+						updateNode(currentPath, mindemand);
+						CopyDataBase();
+						demand = demand - mindemand;
+						updateDemandData(SE, demand, sliceName, vLink);
+					}
+				}
+			}
+			if (demand != 0) {
+				removeDemand(SE, sliceName, vLink);
+				returnBandwidth(SE, sliceName, vLink);
+				try {
+					PreparedStatement psDelete = conn
+							.prepareStatement("DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
+					psDelete.setString(1, SE);
+					psDelete.setString(2, sliceName);
+					psDelete.setString(3, vLink);
+					psDelete.executeUpdate();
+				} catch (Exception e) {
+				}
+				continue;
+			}
+
+		}
+		// convertMappingData();
+		ratio = calculateRatio(totalDemand, vLink);
+		return ratio;
+	}
+
 	@SuppressWarnings("unchecked")
 	public Double MappingMultiGreedy_BFS() {
 		initial();
@@ -56,35 +137,32 @@ public class RankingMVP extends Algorithm_EE {
 				}
 				continue;
 			}
-//			listPathsNodeTurnOn = sortByValues(listPathNodeTurnOn(listPaths));
-//			System.out.println(listPathsNodeTurnOn);
-//			Iterator<Entry<String, Integer>> iter = listPathsNodeTurnOn
-//					.entrySet().iterator();
-//			while (iter.hasNext()) {
-			for(int i=0; i<listPaths.size();i++)
-			{
+			// listPathsNodeTurnOn = sortByValues(listPathNodeTurnOn(listPaths));
+			// System.out.println(listPathsNodeTurnOn);
+			// Iterator<Entry<String, Integer>> iter = listPathsNodeTurnOn
+			// .entrySet().iterator();
+			// while (iter.hasNext()) {
+			for (int i = 0; i < listPaths.size(); i++) {
 				currentPath = listPaths.get(i);
 				Double mindemand = minBWSE(currentPath);
-				if(mindemand>0)
-				{
-				if (mindemand >= demand) {
-					updateMappingData(currentPath, SE, demand, sliceName, vLink);
-					updatePort(currentPath, demand);
-					updateNode(currentPath, demand);
-					CopyDataBase();
-					removeDemand(SE, sliceName, vLink);
-					demand = 0;
-					break;
-				} else {
-					updateMappingData(currentPath, SE, mindemand, sliceName,
-							vLink);
-					updatePort(currentPath, mindemand);
-					updateNode(currentPath, mindemand);
-					CopyDataBase();
-					demand = demand - mindemand;
-					updateDemandData(SE, demand, sliceName, vLink);
+				if (mindemand > 0) {
+					if (mindemand >= demand) {
+						updateMappingData(currentPath, SE, demand, sliceName, vLink);
+						updatePort(currentPath, demand);
+						updateNode(currentPath, demand);
+						CopyDataBase();
+						removeDemand(SE, sliceName, vLink);
+						demand = 0;
+						break;
+					} else {
+						updateMappingData(currentPath, SE, mindemand, sliceName, vLink);
+						updatePort(currentPath, mindemand);
+						updateNode(currentPath, mindemand);
+						CopyDataBase();
+						demand = demand - mindemand;
+						updateDemandData(SE, demand, sliceName, vLink);
+					}
 				}
-			}
 			}
 			if (demand != 0) {
 				removeDemand(SE, sliceName, vLink);
@@ -106,94 +184,12 @@ public class RankingMVP extends Algorithm_EE {
 		ratio = calculateRatio(totalDemand, vLink);
 		return ratio;
 	}
-	
-	public Double MappingRankingMVP(JSONObject graph, JSONObject clusterDemand) {
-		initial(graph);
-		nodemapping.nodeMappingNeighborID();
-		loadData.convertDemand(saveName);
-		LinkedList<String> listPaths;
-		Map<String, Integer> listPathsNodeTurnOn = new HashMap<String, Integer>();
-		String currentPath = "";
-		double totalDemand = numberOfRecord("DEMANDNEW");
-		while (numberOfRecord("DEMANDNEW") != 0) {
-			getDemand();
-			if (srcreq != 0 || dstreq != 0) {
-				removeDemand(SE, sliceName, vLink);
-				continue;
-			}
-			updatePath2DB(SE, demand, topo, sliceName, vLink);
-			listPaths = getListPaths();
-			if (listPaths.size() == 0) {
-				PreparedStatement psDelete;
-				try {
-					psDelete = conn
-							.prepareStatement("DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
-					psDelete.setString(1, SE);
-					psDelete.setString(2, sliceName);
-					psDelete.setString(3, vLink);
-					returnBandwidth(SE, sliceName, vLink);
-					psDelete.executeUpdate();
-					removeDemand(SE, sliceName, vLink);
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
-				continue;
-			}
-//			listPathsNodeTurnOn = sortByValues(listPathNodeTurnOn(listPaths));
-//			System.out.println(listPathsNodeTurnOn);
-//			Iterator<Entry<String, Integer>> iter = listPathsNodeTurnOn
-//					.entrySet().iterator();
-//			while (iter.hasNext()) {
-			for(int i=0; i<listPaths.size();i++)
-			{
-				currentPath = listPaths.get(i);
-				Double mindemand = minBWSE(currentPath);
-				if(mindemand>0)
-				{
-				if (mindemand >= demand) {
-					updateMappingData(currentPath, SE, demand, sliceName, vLink);
-					updatePort(currentPath, demand);
-					updateNode(currentPath, demand);
-					CopyDataBase();
-					removeDemand(SE, sliceName, vLink);
-					demand = 0;
-					break;
-				} else {
-					updateMappingData(currentPath, SE, mindemand, sliceName,
-							vLink);
-					updatePort(currentPath, mindemand);
-					updateNode(currentPath, mindemand);
-					CopyDataBase();
-					demand = demand - mindemand;
-					updateDemandData(SE, demand, sliceName, vLink);
-				}
-			}
-			}
-			if (demand != 0) {
-				removeDemand(SE, sliceName, vLink);
-				returnBandwidth(SE, sliceName, vLink);
-				try {
-					PreparedStatement psDelete = conn
-							.prepareStatement("DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
-					psDelete.setString(1, SE);
-					psDelete.setString(2, sliceName);
-					psDelete.setString(3, vLink);
-					psDelete.executeUpdate();
-				} catch (Exception e) {
-				}
-				continue;
-			}
 
-		}
-		// convertMappingData();
-		ratio = calculateRatio(totalDemand, vLink);
-		return ratio;
-	}
-	
 	@SuppressWarnings("unchecked")
 	public Double MappingMultiHEE_Power() {
 		initial();
-		nodemapping.nodeMappingNeighborID();;
+		nodemapping.nodeMappingNeighborID();
+		;
 		loadData.convertDemand(saveName);
 		LinkedList<String> listPaths;
 		Map<String, Integer> listPathsNodeTurnOn = new HashMap<String, Integer>();
@@ -225,34 +221,31 @@ public class RankingMVP extends Algorithm_EE {
 				continue;
 			}
 			listPathsNodeTurnOn = sortByValues(listPathNodeTurnOn(listPaths));
-//			System.out.println(listPathsNodeTurnOn);
-			Iterator<Entry<String, Integer>> iter = listPathsNodeTurnOn
-					.entrySet().iterator();
+			// System.out.println(listPathsNodeTurnOn);
+			Iterator<Entry<String, Integer>> iter = listPathsNodeTurnOn.entrySet().iterator();
 			while (iter.hasNext()) {
 				Entry<String, Integer> entry = iter.next();
 				currentPath = entry.getKey();
 				Double mindemand = minBWSE(currentPath);
-				if(mindemand>0)
-				{
-				if (mindemand >= demand) {
-					updateMappingData(currentPath, SE, demand, sliceName, vLink);
-					updatePort(currentPath, demand);
-					updateNode(currentPath, demand);
-					CopyDataBase();
-					removeDemand(SE, sliceName, vLink);
-					demand = 0;
-					break;
-					
-				} else {
-					updateMappingData(currentPath, SE, mindemand, sliceName,
-							vLink);
-					updatePort(currentPath, mindemand);
-					updateNode(currentPath, mindemand);
-					CopyDataBase();
-					demand = demand - mindemand;
-					updateDemandData(SE, demand, sliceName, vLink);
+				if (mindemand > 0) {
+					if (mindemand >= demand) {
+						updateMappingData(currentPath, SE, demand, sliceName, vLink);
+						updatePort(currentPath, demand);
+						updateNode(currentPath, demand);
+						CopyDataBase();
+						removeDemand(SE, sliceName, vLink);
+						demand = 0;
+						break;
+
+					} else {
+						updateMappingData(currentPath, SE, mindemand, sliceName, vLink);
+						updatePort(currentPath, mindemand);
+						updateNode(currentPath, mindemand);
+						CopyDataBase();
+						demand = demand - mindemand;
+						updateDemandData(SE, demand, sliceName, vLink);
+					}
 				}
-			}
 			}
 			if (demand != 0) {
 				removeDemand(SE, sliceName, vLink);
@@ -282,11 +275,10 @@ public class RankingMVP extends Algorithm_EE {
 			String[] node = path.split(" ");
 			for (int i = 0; i < node.length; i++) {
 				if (state(node[i]).equals("3")) {
-					num=num+1000;
-				
-				}
-				else
-					num=num+1;
+					num = num + 1000;
+
+				} else
+					num = num + 1;
 			}
 			listpath.put(path, num);
 			num = 0;
@@ -319,8 +311,7 @@ public class RankingMVP extends Algorithm_EE {
 		// Defined Custom Comparator here
 		Collections.sort(list, new Comparator() {
 			public int compare(Object o1, Object o2) {
-				return ((Comparable) ((Map.Entry) (o1)).getValue())
-						.compareTo(((Map.Entry) (o2)).getValue());
+				return ((Comparable) ((Map.Entry) (o1)).getValue()).compareTo(((Map.Entry) (o2)).getValue());
 			}
 		});
 

@@ -18,6 +18,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
@@ -30,7 +31,7 @@ import org.json.simple.JSONObject;
  * @author LongKB
  *
  */
-public class Load_Data {
+public class DataLoader {
 	//Parameters
 	public int nNode;
 	public int maxDemand;
@@ -53,40 +54,10 @@ public class Load_Data {
 	public LinkedList<String>listSite;
 	public static double N=1, M=1;
 	
-	public Load_Data() {
+	
+	public DataLoader() {
 		topo=new Topology();
 		listSite=new LinkedList<String>();
-	}
-	
-	public void loadDataFromGraph2Topo(JSONObject graph, Topology topo, Map<String, Double> linkBandwidth) {
-
-		LinkedList<String> listnode = new LinkedList<String>();
-		try (BufferedReader reader = Files.newBufferedReader(path, charset)) {
-			String line = null;
-			String start, end;
-			double bandwidth;
-			while ((line = reader.readLine()) != null) {
-				String[] s = line.split(" ");
-				start = s[0];
-				end = s[1];
-				bandwidth = Double.parseDouble(s[2]);
-				topo.addEdge(start, end);
-				this.topo.addNeighbor(start, end);
-				topo.linkBandwidth.put(start+" "+end, bandwidth);
-				topo.addPortState(start, end, bandwidth);
-				if (!listnode.contains(start)) {
-					topo.addNodeState(start, bandwidth);
-					listnode.add(start);
-				}
-				if (!listnode.contains(end)) {
-					topo.addNodeState(end, bandwidth);
-					listnode.add(end);
-				}
-				linkBandwidth.put(start + " " + end, bandwidth);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 
 	public void convertDemand(Map<String, String> Name) {
@@ -234,7 +205,7 @@ public class Load_Data {
 			
 			//Tạo JSON để lưu tọa độ XY của client
 			JSONObject clientXYJSON=new JSONObject();
-			clusterJSON.put("client", clientXYJSON);
+			clusterJSON.put("Client", clientXYJSON);
 			
 			//Tạo JSON để lưu cấu hình của cluster
 			JSONObject configurationJSON=new JSONObject();
@@ -297,7 +268,7 @@ public class Load_Data {
 		double syncBW = getRandomBandwidth((int)reqBW,dwTh/2); //băng thông dùng cho state transfer từ active đến standby
 		clientBWReq+=(reqBW+syncBW)*nActive;
 		
-		int nodeCap=getRandomNodeCapacity(upNodeCapTh, dwNodeCapTh); //Sinh random capacity request cho các node trong cluster
+		double nodeCap=getRandomNodeCapacity(upNodeCapTh, dwNodeCapTh); //Sinh random capacity request cho các node trong cluster
 		clusterNodeReq+=(nActive+nStandby)*nodeCap; 
 		
 		newLoad=getLoad(clusterNodeReq,clientBWReq);  //Load sau khi sinh demand
@@ -307,10 +278,10 @@ public class Load_Data {
 			return true;
 		}
 		//Nếu load mới lớn hơn load đặt ra, loại bỏ demand vừa rồi. Update lại load cũ bằng cách thêm 1 lượng BW vào các req BW
-		if (newLoad > load) { 
+		if (newLoad > load) {
 			clientBWReq=clientBWReq-(reqBW+syncBW)*nActive;
 			clusterNodeReq=clusterNodeReq-(nActive+nStandby)*nodeCap;
-
+			
 			double BW=0;
 			while(BW<=0 || BW>upTh){
 				if (i>50) {
@@ -337,7 +308,7 @@ public class Load_Data {
 				
 				if (reqBW>0 && reqBW<=upTh) {
 					addNewDemand(configurationJSON, nActive, nStandby, nodeCap, reqBW, syncBW);
-					break;
+					return true;
 				}else if (BW==0) {
 					break;
 				}else {
@@ -364,7 +335,7 @@ public class Load_Data {
 		return (rand.nextInt(upTh+10-dwTh)/10+dwTh/10)*10;
 	}
 	@SuppressWarnings("unchecked")
-	public void addNewDemand(JSONObject configJSON, int nActive, int nStandby, int nodeCap, double reqBW, double syncBW){
+	public void addNewDemand(JSONObject configJSON, int nActive, int nStandby, double nodeCap, double reqBW, double syncBW){
 		configJSON.put("Active", nActive);
 		configJSON.put("Standby", nStandby);
 		configJSON.put("reqCapacity", nodeCap);
@@ -386,4 +357,5 @@ public class Load_Data {
 			e.printStackTrace();
 		}
 	}
+
 }

@@ -29,7 +29,7 @@ public class WaxmanGenerator {
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public JSONObject Waxman(int N, int Bandwidth, Double alpha, Double beta) {
+	public JSONObject Waxman(int N, double Bandwidth, Double alpha, Double beta) {
 		//Tạo JSON object để lưu topo.
 		JSONObject topoJSON= new JSONObject();	
 		//Adding node JSON
@@ -42,7 +42,7 @@ public class WaxmanGenerator {
 		LinkedList<String> link = new LinkedList();
 		Map<Integer, Integer> idOfNode = new HashMap<Integer, Integer>();
 
-		String linkCapacity = String.valueOf(Bandwidth);
+		double linkCapacity = Bandwidth;
 		Random r = new Random();
 		
 		//Đánh tọa độ cho các node trong khoảng cách min max
@@ -67,8 +67,8 @@ public class WaxmanGenerator {
 		for (int originNodeId = 1; originNodeId < N + 1; originNodeId++)
 			for (int destinationNodeId = 1; destinationNodeId < N + 1; destinationNodeId++) {
 				if (originNodeId == destinationNodeId) {
-					String xNode=String.valueOf(Math.round(nodeXYPositionTable[originNodeId].getX()));//Lấy tọa độ X của node
-					String yNode=String.valueOf(Math.round(nodeXYPositionTable[originNodeId].getY()));//Lấy tọa độ Y của node
+					double xNode=Math.round(nodeXYPositionTable[originNodeId].getX());//Lấy tọa độ X của node
+					double yNode=Math.round(nodeXYPositionTable[originNodeId].getY());//Lấy tọa độ Y của node
 					
 					JSONObject nodeJSON=new JSONObject();
 					JSONArray neighbour=new JSONArray();

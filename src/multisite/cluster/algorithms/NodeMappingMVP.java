@@ -40,91 +40,9 @@ public class NodeMappingMVP extends NodeMappingNeighbor{
 		sortByVNodeReq();
 		mapvNodeByHEE();
 	}
-	public void nodeMappingNeighborID() {
-//		System.out.println("Node Mapping neighbors new");
-		initial();
-		getsNodes();
-		sortBysNodeNeighbor();
-		getVirtualNodes();
-		sortByID();
-		mapvNodeByID();
-	}
+
 	
-	/**
-	 * Map Virtual Node on suitable Substrate Node 
-	 */
-	public void mapvNodeByID() {
-		VirtualNode vNode;
-		SubStrateNode sNode;
-		
-		LinkedList<String>sNodeQueue=new LinkedList<>(sNodes.keySet());
-		LinkedList<String>listOn=new LinkedList<String>();
-		LinkedList<String>listOff=new LinkedList<String>();
-		
-		for(String skey:sNodes.keySet()){
-			listOff.addLast(skey);
-		}
-		//Turn on the first substrate node
-		for(String skey:sNodes.keySet()){
-			sNodes.get(skey).state=true;
-			listOn.addLast(skey);
-			listOff.remove(skey);
-			break;
-		}		
-		//Map Virtual Network Request one by one
-			for(String vkey:vNodes.keySet()){
-				vNode=vNodes.get(vkey);
-//				System.out.println(vNode.neighbor);
-				boolean canTurnOn;
-				//Duyt Substrate Node
-				for(String skey:sNodeQueue){
-					sNode=sNodes.get(skey);
-					canTurnOn=true;
-					//Check Neighbor
-					for(VirtualNode vir:sNode.vNodes){
-						if(vir.neighbor.contains(vNode.vNode_VN))
-							canTurnOn=false;
-					}
-					if (!canTurnOn) {
-						continue;
-					}
-					if(sNode.listvNodes.contains(vkey)==false && sNode.cap>=vNode.cap){
-//						System.out.println("Add "+vkey+"("+vNode.cap+")"+" vao node "+sNode.name+"("+sNode.cap+")");
-						sNode.addVirtualNode(vNode);
-						updateNodeMappingTable(sNode.name, sNode.cap, vNode.name,vNode.cap, vNode.SE_VN);
-						vNode.mapOnSubstrateNode(sNode.name);
-						updateDemandOfNode(vNode.name, vNode.cap, vkey);
-						//Refresh on/off substrate node list
-						if(sNode.cap==0){
-							listOff.remove(skey);
-							listOn.remove(skey);
-						}else {
-							if(!listOn.contains(skey)){
-								listOn.addLast(skey);
-								listOff.remove(skey);
-							}
-//							System.out.println("Node: "+skey+" nei "+sNode.listNeighbors);
-							for(String nei:sNode.listNeighbors){
-								if(!listOn.contains(nei)){
-									listOn.addLast(nei);
-									listOff.remove(nei);
-								}
-							}
-						}
-						sNodeQueue=new LinkedList<String>();
-						for(String skeyOn:listOn)
-							sNodeQueue.addLast(skeyOn);
-						for(String skeyOff:listOff)
-							sNodeQueue.addLast(skeyOff);
-//						System.out.println(sNodeQueue);
-						break;
-					}
-				}
-			}
-			//Display info
-//			for(String s:sNodeQueue)
-//				System.out.println(sNodes.get(s).name+"("+sNodes.get(s).neighbors.size()+")  "+sNodes.get(s).cap);
-		}
+	
 	
 	/**
 	 * Map Virtual Node on suitable Substrate Node 

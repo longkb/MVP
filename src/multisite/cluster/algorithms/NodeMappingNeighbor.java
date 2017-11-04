@@ -8,30 +8,39 @@ import java.sql.Statement;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.derby.impl.store.access.sort.SortScan;
-
+import multisite.cluster.model.CloudSite;
+import multisite.cluster.model.Link;
 import multisite.cluster.model.SubStrateNode;
-import multisite.cluster.model.Topology;
+import multisite.cluster.model.TopoSite;
 import multisite.cluster.model.VirtualNet;
 import multisite.cluster.model.VirtualNode;
 
 public class NodeMappingNeighbor extends NodeMapping{
-	public Topology topology;
+	public HashMap<String, CloudSite> sites;
+	public HashMap<String, Link> links;
 	public HashMap<String,VirtualNet>vNets;
 	/**
 	 * Hàm tạo
 	 */
 	public NodeMappingNeighbor() {
 		super();
+	}
+
+	public void nodeMappingNeighborID(TopoSite topoSite) {
+		System.out.println("Node Mapping neighbors new");
+		HashMap<String, CloudSite> sortedSites;
+		this.sites = topoSite.getSites();
+		this.links = topoSite.getLinks();
+		sortedSites = sortBySiteNeighbor(this.sites);
+		getVirtualNodes();
+//		sortByID();
+//		mapvNodeByID();
 	}
 
 	/**
@@ -42,13 +51,11 @@ public class NodeMappingNeighbor extends NodeMapping{
 	public void nodeMappingNeighbor() {
 		System.out.println("Node Mapping neighbors");
 		initial();
-		getsNodes();
 		sortBysNodeNeighbor();
 		getVirtualNodes();
 		sortByVNodeNei();
 		mapvNodeByNeighbor();
 	}
-	
 	/**
 	 * VNE: Node Mapping Ranking theo VNet
 	 * 
@@ -273,6 +280,81 @@ public class NodeMappingNeighbor extends NodeMapping{
 		}
 	}
 	/**
+	 * Map Virtual Node on suitable Substrate Node 
+	 */
+	public void mapvNodeByID() {
+		VirtualNode vNode;
+		SubStrateNode sNode;
+		
+		LinkedList<String>sNodeQueue=new LinkedList<>(sNodes.keySet());
+		LinkedList<String>listOn=new LinkedList<String>();
+		LinkedList<String>listOff=new LinkedList<String>();
+		
+		for(String skey:sNodes.keySet()){
+			listOff.addLast(skey);
+		}
+		//Turn on the first substrate node
+		for(String skey:sNodes.keySet()){
+			sNodes.get(skey).state=true;
+			listOn.addLast(skey);
+			listOff.remove(skey);
+			break;
+		}		
+		//Map Virtual Network Request one by one
+			for(String vkey:vNodes.keySet()){
+				vNode=vNodes.get(vkey);
+//				System.out.println(vNode.neighbor);
+				boolean canTurnOn;
+				//Duyt Substrate Node
+				for(String skey:sNodeQueue){
+					sNode=sNodes.get(skey);
+					canTurnOn=true;
+					//Check Neighbor
+					for(VirtualNode vir:sNode.vNodes){
+						if(vir.neighbor.contains(vNode.vNode_VN))
+							canTurnOn=false;
+					}
+					if (!canTurnOn) {
+						continue;
+					}
+					if(sNode.listvNodes.contains(vkey)==false && sNode.cap>=vNode.cap){
+//						System.out.println("Add "+vkey+"("+vNode.cap+")"+" vao node "+sNode.name+"("+sNode.cap+")");
+						sNode.addVirtualNode(vNode);
+						updateNodeMappingTable(sNode.name, sNode.cap, vNode.name,vNode.cap, vNode.SE_VN);
+						vNode.mapOnSubstrateNode(sNode.name);
+						updateDemandOfNode(vNode.name, vNode.cap, vkey);
+						//Refresh on/off substrate node list
+						if(sNode.cap==0){
+							listOff.remove(skey);
+							listOn.remove(skey);
+						}else {
+							if(!listOn.contains(skey)){
+								listOn.addLast(skey);
+								listOff.remove(skey);
+							}
+//							System.out.println("Node: "+skey+" nei "+sNode.listNeighbors);
+							for(String nei:sNode.listNeighbors){
+								if(!listOn.contains(nei)){
+									listOn.addLast(nei);
+									listOff.remove(nei);
+								}
+							}
+						}
+						sNodeQueue=new LinkedList<String>();
+						for(String skeyOn:listOn)
+							sNodeQueue.addLast(skeyOn);
+						for(String skeyOff:listOff)
+							sNodeQueue.addLast(skeyOff);
+//						System.out.println(sNodeQueue);
+						break;
+					}
+				}
+			}
+			//Display info
+//			for(String s:sNodeQueue)
+//				System.out.println(sNodes.get(s).name+"("+sNodes.get(s).neighbors.size()+")  "+sNodes.get(s).cap);
+		}
+	/**
 	 * Lấy các VNR và các nút ảo trong VNR đó
 	 */
 	public void getvNets(){
@@ -303,73 +385,30 @@ public class NodeMappingNeighbor extends NodeMapping{
 //			vNet.addvNode(vNode);
 		}
 	}
-	/**
-	 * Lấy các nút vật lý
-	 */
-	public void getsNodes(){
-		conn = db.connect();
-		sNodes= new LinkedHashMap<String, SubStrateNode>();
-		Map<String, SubStrateNode>mapNodes=new HashMap<String, SubStrateNode>();
-		try {
-			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt
-					.executeQuery("SELECT * FROM NODE");
-			while (rs.next()) {
-				SubStrateNode node = new SubStrateNode(rs.getString(1),
-						rs.getDouble(2), false);
-				mapNodes.put(node.name, node);
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		db.disconnect();
-		SubStrateNode cNode;
-		
-		for(String name:mapNodes.keySet()){
-			cNode=mapNodes.get(name);
-			//Add neighbor for cNode
-			cNode.listNeighbors=topology.adjacentNodes(name);
-//			System.out.println(topo.linkBandwidth);
-			for(String nei:cNode.listNeighbors){
-				cNode.neighbors.add(mapNodes.get(nei));
-			}
-			//Add outgoingLink bandwidth for cNode
-			double outGoingBW=0;
-			for(String link:topo.linkBandwidth.keySet()){
-				if(link.contains(cNode.name))
-					outGoingBW+=topo.linkBandwidth.get(link);
-			}
-			cNode.outGoingBW=outGoingBW/2;
-//			System.out.println(cNode.name+"   "+cNode.nNeighbors());
-			cNode.rank=cNode.cap*cNode.outGoingBW;
-			sNodes.put(name, cNode);
-		}
-	}
+
 	
 	/**
 	 * Sort substrate node by nNeighbors descending
 	 * 
 	 * @param map
 	 */
-	public void sortBysNodeNeighbor() {
-		List<Map.Entry<String, SubStrateNode>> list = new LinkedList<>(
-				sNodes.entrySet());
-		Collections.sort(list,new Comparator<Map.Entry<String, SubStrateNode>>() {
+	public HashMap<String, CloudSite> sortBySiteNeighbor(HashMap<String, CloudSite> sites) {
+		List<Map.Entry<String, CloudSite>> list = new LinkedList<>(
+				sites.entrySet());
+		Collections.sort(list,new Comparator<Map.Entry<String, CloudSite>>() {
 					@Override
-					public int compare(Map.Entry<String, SubStrateNode> o1,Map.Entry<String, SubStrateNode> o2) {
-						int result=Double.compare(o2.getValue().nNeighbors(),o1.getValue().nNeighbors());
+					public int compare(Map.Entry<String, CloudSite> o1,Map.Entry<String, CloudSite> o2) {
+						int result=Double.compare(o2.getValue().nNeighbour(),o1.getValue().nNeighbour());
 						if(result==0)
-							result=Double.compare(o2.getValue().cap,o1.getValue().cap);
+							result=Double.compare(o2.getValue().capacity,o1.getValue().capacity);
 						return result;
 					}
 				});
-		HashMap<String, SubStrateNode>listsNodes = new LinkedHashMap<>();
-//		System.out.println("vNodes");
-		for (Map.Entry<String, SubStrateNode> entry : list) {
-			listsNodes.put(entry.getKey(), entry.getValue());
-//			System.out.println(entry.getValue().name+"  "+entry.getValue().nNeighbors()+"  "+entry.getValue().cap);
+		HashMap<String, CloudSite>sortedSites = new LinkedHashMap<>();
+		for (Map.Entry<String, CloudSite> entry : list) {
+			sortedSites.put(entry.getKey(), entry.getValue());
 		}
-		sNodes=listsNodes;
+		return sortedSites;
 	}
 	/**
 	 * Ranking according to nNeighbors, cap, outgoingLinkBW

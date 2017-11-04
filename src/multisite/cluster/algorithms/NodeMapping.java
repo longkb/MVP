@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import multisite.cluster.model.Database;
-import multisite.cluster.model.FileStream;
 import multisite.cluster.model.SubStrateNode;
 import multisite.cluster.model.Topology;
 import multisite.cluster.model.VirtualNet;
@@ -28,7 +27,6 @@ public class NodeMapping {
 	public Database db;
 	public Connection conn;
 	public Topology topo;
-	public FileStream fileStream;
 	public HashMap<String, SubStrateNode> sNodes;
 	public HashMap<String, VirtualNode> vNodes;
 
@@ -39,10 +37,7 @@ public class NodeMapping {
 
 	public void initial() {
 		topo = new Topology();
-		fileStream = new FileStream();
 		db.resetDatabase();
-		fileStream.loadingTopoData(topo);
-		fileStream.loadingDemandData(topo);
 	}
 
 	/**

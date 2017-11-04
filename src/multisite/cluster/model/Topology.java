@@ -16,10 +16,8 @@ public class Topology {
 	Database database;
 	private Connection conn;
 	private double BW=0;
-	@SuppressWarnings("unused")
 	private double maxBwOfLink=100;
 	private Map<String, LinkedHashSet<String>> map;
-	@SuppressWarnings("unused")
 	public Map<String, Double>linkBandwidth;
 	public LinkedList<String> forgetLink;
 	
@@ -59,17 +57,6 @@ public class Topology {
 		neighbor.add(node2);
 	}
 	
-//	public void addBandwidth(String node1,String node2,double bandwidth){
-//		linkBandwidth.put(node1+node2,bandwidth);
-//		try {
-//			PreparedStatement psInsert=conn.prepareStatement("INSERT INTO LINKBW VALUES (?,?)");
-//			psInsert.setString(1, node1+" "+node2);
-//			psInsert.setDouble(2, bandwidth);
-//			psInsert.executeUpdate();
-//		} catch (SQLException e) {
-//			e.printStackTrace();
-//		}
-//	}
 	public void addPortState(String node1, String node2, double bandwidth)
 	{
 		try {
@@ -115,20 +102,7 @@ public class Topology {
 			ResultSet rsDM = psCheck.executeQuery();
 			rsDM.next();
 			double dm = rsDM.getDouble(1);
-//			psCheck = conn
-//					.prepareStatement("SELECT SUM(SRCREQ) FROM DEMANDNEW WHERE SE=(?) AND SLICENAME=(?)");
-//			psCheck.setString(1, node1 + " " + node2);
-//			psCheck.setString(2, sliceName);
-//			rsDM = psCheck.executeQuery();
-//			rsDM.next();
-//			double srcDM = rsDM.getDouble(1);
-//			psCheck = conn
-//					.prepareStatement("SELECT SUM(DSTREQ) FROM DEMANDNEW WHERE SE=(?) AND SLICENAME=(?)");
-//			psCheck.setString(1, node1 + " " + node2);
-//			psCheck.setString(2, sliceName);
-//			rsDM = psCheck.executeQuery();
-//			rsDM.next();
-//			double dstDM = rsDM.getDouble(1);
+
 			if (dm != 0) {
 				PreparedStatement psDelete = conn
 						.prepareStatement("DELETE FROM DEMANDNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");

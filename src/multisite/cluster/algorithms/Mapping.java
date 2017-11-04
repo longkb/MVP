@@ -5,25 +5,25 @@ import java.sql.Connection;
 import org.json.simple.JSONObject;
 
 import multisite.cluster.model.Database;
-import multisite.cluster.model.Load_Data;
+import multisite.cluster.model.DataLoader;
 import multisite.cluster.model.modelNetFPGA;
 
 public class Mapping {
 	Connection conn;
 	Database database = new Database();
-	Load_Data load_data = new Load_Data();
+	DataLoader load_data = new DataLoader();
 	JSONObject graph; //Multi-site topo
 	JSONObject clusterDemand;
 	
 	// Algorithms objects
-	private RankingMVP algorithmRankingMVP;
+	private MVP_Algorithm rankingLB_obj;
 	private Single_EE algorithmSingleHEE;
 
 	// Outputs
 	private static double ratioSingleHEE_BFS=0.0;
 	private static double PSingleHEE_BFS=0.0;
 	
-	private static double ratioRankingMVP=0.0;
+	private static double ratioRankingLB_MVP=0.0;
 	private static double linkUtilRankingMVP=0.0;
 	
 	public Mapping() {
@@ -39,7 +39,7 @@ public class Mapping {
 	public void map(int nNodes, int maxDemand, int minDemand, double alpha, double beta, int nTime) {
 		for (minDemand = minDemand; minDemand <= maxDemand; minDemand = minDemand + 10) {
 			//Reset all output
-			ratioRankingMVP = 0.0;
+			ratioRankingLB_MVP = 0.0;
 			linkUtilRankingMVP = 0.0;
 			ratioSingleHEE_BFS = 0.0;
 			PSingleHEE_BFS = 0.0;
@@ -56,11 +56,11 @@ public class Mapping {
 				System.out.print("" + i);
 				Mapping mapping = new Mapping();
 				graph=load_data.createMultiSiteTopo();
-				clusterDemand=load_data.createClusterDemand(graph);
+				clusterDemand=load_data.createClusterDemand(graph); //Sinh demand theo demand ratio
 				System.out.print("-");
 
 //				mapping.runSingleHEE_BFS(graph, clusterDemand);
-				mapping.runMultiHEE_BFS(graph, clusterDemand);
+				mapping.runRankingLB_MVP(graph, clusterDemand);
 
 //				mapping.database.disconnect();  //Test ko DB
 				// if(check1 < check4)
@@ -73,7 +73,7 @@ public class Mapping {
 			}
 			System.out.println("\nAcpt Ratio");
 			System.out.println(ratioSingleHEE_BFS / nTime);
-			System.out.println(ratioRankingMVP / nTime);
+			System.out.println(ratioRankingLB_MVP / nTime);
 
 			System.out.println("Power Ratio");
 			System.out.println(PSingleHEE_BFS / nTime);
@@ -89,10 +89,9 @@ public class Mapping {
 //		PSingleHEE_BFS = PSingleHEE_BFS + h / netFPGA.powerFullMesh(load_data.numLink, node);
 	}
 
-	public void runMultiHEE_BFS(JSONObject graph, JSONObject clusterDemand) {
-		// System.out.println("Neighbor mapping ");
-		algorithmRankingMVP = new RankingMVP();
-		ratioRankingMVP += algorithmRankingMVP.MappingRankingMVP(graph, clusterDemand);
+	public void runRankingLB_MVP(JSONObject graph, JSONObject clusterDemand) {
+		rankingLB_obj = new MVP_Algorithm();
+		ratioRankingLB_MVP += rankingLB_obj.MappingRankingLB_MVP(graph, clusterDemand);
 		//linkUtilRankingMVP = linkUtilRankingMVP + h / netFPGA.powerFullMesh(load_data.numLink, node);
 	}
 }

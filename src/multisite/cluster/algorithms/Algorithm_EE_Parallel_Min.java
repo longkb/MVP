@@ -8,7 +8,7 @@ import java.util.Map;
 
 import multisite.cluster.model.modelNetFPGA;
 
-public class Algorithm_EE_Parallel_Min extends Algorithm_EE {
+public class Algorithm_EE_Parallel_Min extends MVP_Algorithm {
 	public Algorithm_EE_Parallel_Min() {
 		super();
 	}

@@ -12,56 +12,123 @@ import java.util.Map;
 import org.json.simple.JSONObject;
 
 import multisite.cluster.model.BFS;
+import multisite.cluster.model.Cluster;
 import multisite.cluster.model.Database;
-import multisite.cluster.model.Load_Data;
+import multisite.cluster.model.DataLoader;
+import multisite.cluster.model.TopoSite;
 import multisite.cluster.model.Topology;
 import multisite.cluster.model.modelNetFPGA;
 
-public class Algorithm_EE {
-	public static final String PORT_IDLE = "0";
-	public static final String PORT_10 = "10";
-	public static final String PORT_100 = "100";
-	public static final String PORT_1G = "1000";
-	public static final String NODE_1G = "1";
-	public static final String NODE_10_100 = "2";
-	public static final String NODE_IDLE = "3";
+public class MVP_Algorithm {
 	public Database database;
 	public String sliceName;
 	public String vLink;
-	public Load_Data loadData;
+	public DataLoader loadData;
 	public Connection conn;
-	public Topology topo;
 	public BFS bfs;
 	public double maxBwOfLink = 1000;
 	public Map<String, Double> linkBandwidth;
 	public String SE;
 	public double demand, srcreq, dstreq;
-	public NodeMappingMVP nodemapping;
-	public double ratio=0;
+	public NodeMappingNeighbor nodemapping;
+	public double ratio = 0;
 	public Map<String, String> saveName;
 	public boolean check;
 	public Map<String, Integer> listdemand;
 	public int nFlow = 4;
 	
-	private JSONObject graph;
-	public Algorithm_EE() {
-//		database = new Database();
-//		conn = database.connect();
+	public TopoSite topoSite;
+	public HashMap<String, Cluster>reqClusterList;
+
+	public MVP_Algorithm() {
+		nodemapping = new NodeMappingNeighbor();
+		topoSite = new TopoSite();
+		reqClusterList = new HashMap<String, Cluster>();
 	}
 
-	public void initial(JSONObject graph) {
-		nodemapping = new NodeMappingMVP();
-		
-		linkBandwidth = new HashMap<String, Double>();
-		saveName= new HashMap<String, String>();
-		topo = new Topology();
-		check=false;
-		database.resetDatabase(); //Check again
-		
-		this.graph=graph;
-		loadData = new Load_Data();
-		loadData.loadDataFromGraph2Topo(this.graph, topo, linkBandwidth);
-		nodemapping.topology=loadData.topo;
+	public void initial(JSONObject graph, JSONObject demand) {
+		topoSite.loadTopoFromJSON(graph);
+		topoSite.loadDemandFromJSON(demand);
+	}
+
+	public double MappingRankingLB_MVP(JSONObject graph, JSONObject demand) {
+		initial(graph, demand);
+		nodemapping.nodeMappingNeighborID(this.topoSite);
+//		loadData.convertDemand(saveName);
+//		LinkedList<String> listPaths;
+//		Map<String, Integer> listPathsNodeTurnOn = new HashMap<String, Integer>();
+//		String currentPath = "";
+//		double totalDemand = numberOfRecord("DEMANDNEW");
+//		while (numberOfRecord("DEMANDNEW") != 0) {
+//			getDemand();
+//			if (srcreq != 0 || dstreq != 0) {
+//				removeDemand(SE, sliceName, vLink);
+//				continue;
+//			}
+//			updatePath2DB(SE, demand, topo, sliceName, vLink);
+//			listPaths = getListPaths();
+//			if (listPaths.size() == 0) {
+//				PreparedStatement psDelete;
+//				try {
+//					psDelete = conn
+//							.prepareStatement("DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
+//					psDelete.setString(1, SE);
+//					psDelete.setString(2, sliceName);
+//					psDelete.setString(3, vLink);
+//					returnBandwidth(SE, sliceName, vLink);
+//					psDelete.executeUpdate();
+//					removeDemand(SE, sliceName, vLink);
+//				} catch (SQLException e) {
+//					e.printStackTrace();
+//				}
+//				continue;
+//			}
+//			// listPathsNodeTurnOn = sortByValues(listPathNodeTurnOn(listPaths));
+//			// System.out.println(listPathsNodeTurnOn);
+//			// Iterator<Entry<String, Integer>> iter = listPathsNodeTurnOn
+//			// .entrySet().iterator();
+//			// while (iter.hasNext()) {
+//			for (int i = 0; i < listPaths.size(); i++) {
+//				currentPath = listPaths.get(i);
+//				Double mindemand = minBWSE(currentPath);
+//				if (mindemand > 0) {
+//					if (mindemand >= demand) {
+//						updateMappingData(currentPath, SE, demand, sliceName, vLink);
+//						updatePort(currentPath, demand);
+//						updateNode(currentPath, demand);
+//						CopyDataBase();
+//						removeDemand(SE, sliceName, vLink);
+//						demand = 0;
+//						break;
+//					} else {
+//						updateMappingData(currentPath, SE, mindemand, sliceName, vLink);
+//						updatePort(currentPath, mindemand);
+//						updateNode(currentPath, mindemand);
+//						CopyDataBase();
+//						demand = demand - mindemand;
+//						updateDemandData(SE, demand, sliceName, vLink);
+//					}
+//				}
+//			}
+//			if (demand != 0) {
+//				removeDemand(SE, sliceName, vLink);
+//				returnBandwidth(SE, sliceName, vLink);
+//				try {
+//					PreparedStatement psDelete = conn
+//							.prepareStatement("DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
+//					psDelete.setString(1, SE);
+//					psDelete.setString(2, sliceName);
+//					psDelete.setString(3, vLink);
+//					psDelete.executeUpdate();
+//				} catch (Exception e) {
+//				}
+//				continue;
+//			}
+//
+//		}
+//		// convertMappingData();
+//		ratio = calculateRatio(totalDemand, vLink);
+		return ratio;
 	}
 
 	public double MappingEnergy() {
@@ -76,14 +143,13 @@ public class Algorithm_EE {
 		while (numberOfRecord("DEMANDNEW") != 0) {
 			saveTempNodeState(stateNode);
 			getDemand();
-			if(srcreq !=0 || dstreq!=0)
-			{
-				removeDemand(SE, sliceName,vLink);
+			if (srcreq != 0 || dstreq != 0) {
+				removeDemand(SE, sliceName, vLink);
 				continue;
 			}
-			updatePath2DB(SE, demand, topo, sliceName,vLink);
+			updatePath2DB(SE, demand, topo, sliceName, vLink);
 			listPaths = getListPaths();
-//			System.out.println(listPaths);
+			// System.out.println(listPaths);
 			if (listPaths.size() == 0) {
 				// System.out.println(SE);
 				PreparedStatement psDelete;
@@ -93,7 +159,7 @@ public class Algorithm_EE {
 					psDelete.setString(1, SE);
 					psDelete.setString(2, sliceName);
 					psDelete.setString(3, vLink);
-					returnBandwidth(SE, sliceName,vLink);
+					returnBandwidth(SE, sliceName, vLink);
 					psDelete.executeUpdate();
 					removeDemand(SE, sliceName, vLink);
 				} catch (SQLException e) {
@@ -104,47 +170,44 @@ public class Algorithm_EE {
 			}
 			for (int i = 0; i < listPaths.size(); i++) {
 				Double mindemand = minBWSE(listPaths.get(i));
-				if(mindemand>0)
-				{
-				currentPath = listPaths.get(i);
-				if (mindemand >= demand) {
-					int currentpower = fpga.powerPort()
-							+ fpga.powerCoreStatic();
-					if (getPowerAdded(currentPath, demand, currentpower) == 0) {
-						updateMappingData(currentPath, SE, demand, sliceName,vLink);
-						updatePort(currentPath, demand);
-						updateNode(currentPath, demand);
-						CopyDataBase();
-						removeDemand(SE, sliceName,vLink);
-						demand = 0;
-						break;
+				if (mindemand > 0) {
+					currentPath = listPaths.get(i);
+					if (mindemand >= demand) {
+						int currentpower = fpga.powerPort() + fpga.powerCoreStatic();
+						if (getPowerAdded(currentPath, demand, currentpower) == 0) {
+							updateMappingData(currentPath, SE, demand, sliceName, vLink);
+							updatePort(currentPath, demand);
+							updateNode(currentPath, demand);
+							CopyDataBase();
+							removeDemand(SE, sliceName, vLink);
+							demand = 0;
+							break;
+						}
+					} else {
+						int currentpower = fpga.powerPort() + fpga.powerCoreStatic();
+						if (getPowerAdded(currentPath, mindemand, currentpower) == 0) {
+							updateMappingData(currentPath, SE, mindemand, sliceName, vLink);
+							updatePort(currentPath, mindemand);
+							updateNode(currentPath, mindemand);
+							CopyDataBase();
+							demand = demand - mindemand;
+							updateDemandData(SE, demand, sliceName, vLink);
+						}
 					}
-				} else {
-					int currentpower = fpga.powerPort()
-							+ fpga.powerCoreStatic();
-					if (getPowerAdded(currentPath, mindemand, currentpower) == 0) {
-						updateMappingData(currentPath, SE, mindemand, sliceName,vLink);
-						updatePort(currentPath, mindemand);
-						updateNode(currentPath, mindemand);
-						CopyDataBase();
-						demand = demand - mindemand;
-						updateDemandData(SE, demand, sliceName,vLink);
-					}
-				}
 				}
 			}
 			if (demand == 0)
 				continue;
 			else {
 				String path = getListPass(listPaths, demand);
-//				System.out.println("sjshfj "+path);
+				// System.out.println("sjshfj "+path);
 				if (path == null) {
-					//System.out.println("css");
+					// System.out.println("css");
 					removeDemand(SE, sliceName, vLink);
-					returnBandwidth(SE, sliceName,vLink);
+					returnBandwidth(SE, sliceName, vLink);
 					try {
-						PreparedStatement psDelete = conn
-								.prepareStatement("DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
+						PreparedStatement psDelete = conn.prepareStatement(
+								"DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
 						psDelete.setString(1, SE);
 						psDelete.setString(2, sliceName);
 						psDelete.setString(3, vLink);
@@ -154,21 +217,22 @@ public class Algorithm_EE {
 
 					continue;
 				} else {
-					updateMappingData(path, SE, demand, sliceName,vLink);
+					updateMappingData(path, SE, demand, sliceName, vLink);
 					updatePort(path, demand);
 					updateNode(path, demand);
 					CopyDataBase();
-					removeDemand(SE, sliceName,vLink);
+					removeDemand(SE, sliceName, vLink);
 				}
 			}
 
 		}
-//		convertMappingData();
-		ratio = calculateRatio(totalDemand,vLink);
+		// convertMappingData();
+		ratio = calculateRatio(totalDemand, vLink);
 		return ratio;
 	}
+
 	public double MappingEnergyNeighbor() {
-//		System.out.println("sdjshd");
+		// System.out.println("sdjshd");
 		initial();
 		nodemapping.nodeMappingNeighbor();
 		loadData.convertDemand(saveName);
@@ -178,17 +242,16 @@ public class Algorithm_EE {
 		String currentPath = "";
 		double totalDemand = numberOfRecord("DEMANDNEW");
 		while (numberOfRecord("DEMANDNEW") != 0) {
-//			System.out.println("sjhfjs");
+			// System.out.println("sjhfjs");
 			saveTempNodeState(stateNode);
 			getDemand();
-			if(srcreq !=0 || dstreq!=0)
-			{
-				removeDemand(SE, sliceName,vLink);
+			if (srcreq != 0 || dstreq != 0) {
+				removeDemand(SE, sliceName, vLink);
 				continue;
 			}
-			updatePath2DB(SE, demand, topo, sliceName,vLink);
+			updatePath2DB(SE, demand, topo, sliceName, vLink);
 			listPaths = getListPaths();
-//			System.out.println(listPaths);
+			// System.out.println(listPaths);
 			if (listPaths.size() == 0) {
 				// System.out.println(SE);
 				PreparedStatement psDelete;
@@ -199,7 +262,7 @@ public class Algorithm_EE {
 					psDelete.setString(1, SE);
 					psDelete.setString(2, sliceName);
 					psDelete.setString(3, vLink);
-					returnBandwidth(SE, sliceName,vLink);
+					returnBandwidth(SE, sliceName, vLink);
 					psDelete.executeUpdate();
 					removeDemand(SE, sliceName, vLink);
 				} catch (SQLException e) {
@@ -210,47 +273,44 @@ public class Algorithm_EE {
 			}
 			for (int i = 0; i < listPaths.size(); i++) {
 				Double mindemand = minBWSE(listPaths.get(i));
-				if(mindemand>0)
-				{
-				currentPath = listPaths.get(i);
-				if (mindemand >= demand) {
-					int currentpower = fpga.powerPort()
-							+ fpga.powerCoreStatic();
-					if (getPowerAdded(currentPath, demand, currentpower) == 0) {
-						updateMappingData(currentPath, SE, demand, sliceName,vLink);
-						updatePort(currentPath, demand);
-						updateNode(currentPath, demand);
-						CopyDataBase();
-						removeDemand(SE, sliceName,vLink);
-						demand = 0;
-						break;
+				if (mindemand > 0) {
+					currentPath = listPaths.get(i);
+					if (mindemand >= demand) {
+						int currentpower = fpga.powerPort() + fpga.powerCoreStatic();
+						if (getPowerAdded(currentPath, demand, currentpower) == 0) {
+							updateMappingData(currentPath, SE, demand, sliceName, vLink);
+							updatePort(currentPath, demand);
+							updateNode(currentPath, demand);
+							CopyDataBase();
+							removeDemand(SE, sliceName, vLink);
+							demand = 0;
+							break;
+						}
+					} else {
+						int currentpower = fpga.powerPort() + fpga.powerCoreStatic();
+						if (getPowerAdded(currentPath, mindemand, currentpower) == 0) {
+							updateMappingData(currentPath, SE, mindemand, sliceName, vLink);
+							updatePort(currentPath, mindemand);
+							updateNode(currentPath, mindemand);
+							CopyDataBase();
+							demand = demand - mindemand;
+							updateDemandData(SE, demand, sliceName, vLink);
+						}
 					}
-				} else {
-					int currentpower = fpga.powerPort()
-							+ fpga.powerCoreStatic();
-					if (getPowerAdded(currentPath, mindemand, currentpower) == 0) {
-						updateMappingData(currentPath, SE, mindemand, sliceName,vLink);
-						updatePort(currentPath, mindemand);
-						updateNode(currentPath, mindemand);
-						CopyDataBase();
-						demand = demand - mindemand;
-						updateDemandData(SE, demand, sliceName,vLink);
-					}
-				}
 				}
 			}
 			if (demand == 0)
 				continue;
 			else {
 				String path = getListPass(listPaths, demand);
-//				System.out.println("sjshfj "+path);
+				// System.out.println("sjshfj "+path);
 				if (path == null) {
-					//System.out.println("css");
+					// System.out.println("css");
 					removeDemand(SE, sliceName, vLink);
-					returnBandwidth(SE, sliceName,vLink);
+					returnBandwidth(SE, sliceName, vLink);
 					try {
-						PreparedStatement psDelete = conn
-								.prepareStatement("DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
+						PreparedStatement psDelete = conn.prepareStatement(
+								"DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
 						psDelete.setString(1, SE);
 						psDelete.setString(2, sliceName);
 						psDelete.setString(3, vLink);
@@ -260,21 +320,22 @@ public class Algorithm_EE {
 
 					continue;
 				} else {
-					updateMappingData(path, SE, demand, sliceName,vLink);
+					updateMappingData(path, SE, demand, sliceName, vLink);
 					updatePort(path, demand);
 					updateNode(path, demand);
 					CopyDataBase();
-					removeDemand(SE, sliceName,vLink);
+					removeDemand(SE, sliceName, vLink);
 				}
 			}
 
 		}
-//		convertMappingData();
-		ratio = calculateRatio(totalDemand,vLink);
+		// convertMappingData();
+		ratio = calculateRatio(totalDemand, vLink);
 		return ratio;
 	}
+
 	public double MappingEnergyNeighborVer1() {
-//		System.out.println("sdjshd");
+		// System.out.println("sdjshd");
 		initial();
 		nodemapping.nodeMappingNodeRanking();
 		loadData.convertDemand(saveName);
@@ -284,17 +345,16 @@ public class Algorithm_EE {
 		String currentPath = "";
 		double totalDemand = numberOfRecord("DEMANDNEW");
 		while (numberOfRecord("DEMANDNEW") != 0) {
-//			System.out.println("sjhfjs");
+			// System.out.println("sjhfjs");
 			saveTempNodeState(stateNode);
 			getDemand();
-			if(srcreq !=0 || dstreq!=0)
-			{
-				removeDemand(SE, sliceName,vLink);
+			if (srcreq != 0 || dstreq != 0) {
+				removeDemand(SE, sliceName, vLink);
 				continue;
 			}
-			updatePath2DB(SE, demand, topo, sliceName,vLink);
+			updatePath2DB(SE, demand, topo, sliceName, vLink);
 			listPaths = getListPaths();
-//			System.out.println(listPaths);
+			// System.out.println(listPaths);
 			if (listPaths.size() == 0) {
 				// System.out.println(SE);
 				PreparedStatement psDelete;
@@ -305,7 +365,7 @@ public class Algorithm_EE {
 					psDelete.setString(1, SE);
 					psDelete.setString(2, sliceName);
 					psDelete.setString(3, vLink);
-					returnBandwidth(SE, sliceName,vLink);
+					returnBandwidth(SE, sliceName, vLink);
 					psDelete.executeUpdate();
 					removeDemand(SE, sliceName, vLink);
 				} catch (SQLException e) {
@@ -316,47 +376,44 @@ public class Algorithm_EE {
 			}
 			for (int i = 0; i < listPaths.size(); i++) {
 				Double mindemand = minBWSE(listPaths.get(i));
-				if(mindemand>0)
-				{
-				currentPath = listPaths.get(i);
-				if (mindemand >= demand) {
-					int currentpower = fpga.powerPort()
-							+ fpga.powerCoreStatic();
-					if (getPowerAdded(currentPath, demand, currentpower) == 0) {
-						updateMappingData(currentPath, SE, demand, sliceName,vLink);
-						updatePort(currentPath, demand);
-						updateNode(currentPath, demand);
-						CopyDataBase();
-						removeDemand(SE, sliceName,vLink);
-						demand = 0;
-						break;
+				if (mindemand > 0) {
+					currentPath = listPaths.get(i);
+					if (mindemand >= demand) {
+						int currentpower = fpga.powerPort() + fpga.powerCoreStatic();
+						if (getPowerAdded(currentPath, demand, currentpower) == 0) {
+							updateMappingData(currentPath, SE, demand, sliceName, vLink);
+							updatePort(currentPath, demand);
+							updateNode(currentPath, demand);
+							CopyDataBase();
+							removeDemand(SE, sliceName, vLink);
+							demand = 0;
+							break;
+						}
+					} else {
+						int currentpower = fpga.powerPort() + fpga.powerCoreStatic();
+						if (getPowerAdded(currentPath, mindemand, currentpower) == 0) {
+							updateMappingData(currentPath, SE, mindemand, sliceName, vLink);
+							updatePort(currentPath, mindemand);
+							updateNode(currentPath, mindemand);
+							CopyDataBase();
+							demand = demand - mindemand;
+							updateDemandData(SE, demand, sliceName, vLink);
+						}
 					}
-				} else {
-					int currentpower = fpga.powerPort()
-							+ fpga.powerCoreStatic();
-					if (getPowerAdded(currentPath, mindemand, currentpower) == 0) {
-						updateMappingData(currentPath, SE, mindemand, sliceName,vLink);
-						updatePort(currentPath, mindemand);
-						updateNode(currentPath, mindemand);
-						CopyDataBase();
-						demand = demand - mindemand;
-						updateDemandData(SE, demand, sliceName,vLink);
-					}
-				}
 				}
 			}
 			if (demand == 0)
 				continue;
 			else {
 				String path = getListPass(listPaths, demand);
-//				System.out.println("sjshfj "+path);
+				// System.out.println("sjshfj "+path);
 				if (path == null) {
-					//System.out.println("css");
+					// System.out.println("css");
 					removeDemand(SE, sliceName, vLink);
-					returnBandwidth(SE, sliceName,vLink);
+					returnBandwidth(SE, sliceName, vLink);
 					try {
-						PreparedStatement psDelete = conn
-								.prepareStatement("DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
+						PreparedStatement psDelete = conn.prepareStatement(
+								"DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
 						psDelete.setString(1, SE);
 						psDelete.setString(2, sliceName);
 						psDelete.setString(3, vLink);
@@ -366,20 +423,21 @@ public class Algorithm_EE {
 
 					continue;
 				} else {
-					updateMappingData(path, SE, demand, sliceName,vLink);
+					updateMappingData(path, SE, demand, sliceName, vLink);
 					updatePort(path, demand);
 					updateNode(path, demand);
 					CopyDataBase();
-					removeDemand(SE, sliceName,vLink);
+					removeDemand(SE, sliceName, vLink);
 				}
 			}
 
 		}
-//		convertMappingData();
-		ratio = calculateRatio(totalDemand,vLink);
+		// convertMappingData();
+		ratio = calculateRatio(totalDemand, vLink);
 		return ratio;
 	}
-	public double linkEEMapping(){
+
+	public double linkEEMapping() {
 		loadData.convertDemand(saveName);
 		Map<String, String> stateNode = new HashMap<String, String>();
 		modelNetFPGA fpga = new modelNetFPGA();
@@ -387,17 +445,16 @@ public class Algorithm_EE {
 		String currentPath = "";
 		double totalDemand = numberOfRecord("DEMANDNEW");
 		while (numberOfRecord("DEMANDNEW") != 0) {
-//			System.out.println("sjhfjs");
+			// System.out.println("sjhfjs");
 			saveTempNodeState(stateNode);
 			getDemand();
-			if(srcreq !=0 || dstreq!=0)
-			{
-				removeDemand(SE, sliceName,vLink);
+			if (srcreq != 0 || dstreq != 0) {
+				removeDemand(SE, sliceName, vLink);
 				continue;
 			}
-			updatePath2DB(SE, demand, topo, sliceName,vLink);
+			updatePath2DB(SE, demand, topo, sliceName, vLink);
 			listPaths = getListPaths();
-//			System.out.println(listPaths);
+			// System.out.println(listPaths);
 			if (listPaths.size() == 0) {
 				// System.out.println(SE);
 				PreparedStatement psDelete;
@@ -408,7 +465,7 @@ public class Algorithm_EE {
 					psDelete.setString(1, SE);
 					psDelete.setString(2, sliceName);
 					psDelete.setString(3, vLink);
-					returnBandwidth(SE, sliceName,vLink);
+					returnBandwidth(SE, sliceName, vLink);
 					psDelete.executeUpdate();
 					removeDemand(SE, sliceName, vLink);
 				} catch (SQLException e) {
@@ -419,47 +476,44 @@ public class Algorithm_EE {
 			}
 			for (int i = 0; i < listPaths.size(); i++) {
 				Double mindemand = minBWSE(listPaths.get(i));
-				if(mindemand>0)
-				{
-				currentPath = listPaths.get(i);
-				if (mindemand >= demand) {
-					int currentpower = fpga.powerPort()
-							+ fpga.powerCoreStatic();
-					if (getPowerAdded(currentPath, demand, currentpower) == 0) {
-						updateMappingData(currentPath, SE, demand, sliceName,vLink);
-						updatePort(currentPath, demand);
-						updateNode(currentPath, demand);
-						CopyDataBase();
-						removeDemand(SE, sliceName,vLink);
-						demand = 0;
-						break;
+				if (mindemand > 0) {
+					currentPath = listPaths.get(i);
+					if (mindemand >= demand) {
+						int currentpower = fpga.powerPort() + fpga.powerCoreStatic();
+						if (getPowerAdded(currentPath, demand, currentpower) == 0) {
+							updateMappingData(currentPath, SE, demand, sliceName, vLink);
+							updatePort(currentPath, demand);
+							updateNode(currentPath, demand);
+							CopyDataBase();
+							removeDemand(SE, sliceName, vLink);
+							demand = 0;
+							break;
+						}
+					} else {
+						int currentpower = fpga.powerPort() + fpga.powerCoreStatic();
+						if (getPowerAdded(currentPath, mindemand, currentpower) == 0) {
+							updateMappingData(currentPath, SE, mindemand, sliceName, vLink);
+							updatePort(currentPath, mindemand);
+							updateNode(currentPath, mindemand);
+							CopyDataBase();
+							demand = demand - mindemand;
+							updateDemandData(SE, demand, sliceName, vLink);
+						}
 					}
-				} else {
-					int currentpower = fpga.powerPort()
-							+ fpga.powerCoreStatic();
-					if (getPowerAdded(currentPath, mindemand, currentpower) == 0) {
-						updateMappingData(currentPath, SE, mindemand, sliceName,vLink);
-						updatePort(currentPath, mindemand);
-						updateNode(currentPath, mindemand);
-						CopyDataBase();
-						demand = demand - mindemand;
-						updateDemandData(SE, demand, sliceName,vLink);
-					}
-				}
 				}
 			}
 			if (demand == 0)
 				continue;
 			else {
 				String path = getListPass(listPaths, demand);
-//				System.out.println("sjshfj "+path);
+				// System.out.println("sjshfj "+path);
 				if (path == null) {
-					//System.out.println("css");
+					// System.out.println("css");
 					removeDemand(SE, sliceName, vLink);
-					returnBandwidth(SE, sliceName,vLink);
+					returnBandwidth(SE, sliceName, vLink);
 					try {
-						PreparedStatement psDelete = conn
-								.prepareStatement("DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
+						PreparedStatement psDelete = conn.prepareStatement(
+								"DELETE  FROM MAPPINGNEW WHERE SE=(?) AND SLICENAME=(?) AND VLINK=(?)");
 						psDelete.setString(1, SE);
 						psDelete.setString(2, sliceName);
 						psDelete.setString(3, vLink);
@@ -469,21 +523,21 @@ public class Algorithm_EE {
 
 					continue;
 				} else {
-					updateMappingData(path, SE, demand, sliceName,vLink);
+					updateMappingData(path, SE, demand, sliceName, vLink);
 					updatePort(path, demand);
 					updateNode(path, demand);
 					CopyDataBase();
-					removeDemand(SE, sliceName,vLink);
+					removeDemand(SE, sliceName, vLink);
 				}
 			}
 
 		}
-//		convertMappingData();
-		ratio = calculateRatio(totalDemand,vLink);
+		// convertMappingData();
+		ratio = calculateRatio(totalDemand, vLink);
 		return ratio;
 	}
-	public LinkedList<String> getBestPaths(String startNode, String endNode,
-			Topology topo) {
+
+	public LinkedList<String> getBestPaths(String startNode, String endNode, Topology topo) {
 		BFS bfs = new BFS();
 		bfs.setSTART(startNode);
 		bfs.setEND(endNode);
@@ -492,8 +546,8 @@ public class Algorithm_EE {
 		shortpath = bfs.path(topo);
 		return shortpath;
 	}
-	public Integer getPowerAdded(String path, Double bandwidth,
-			Integer currentPower) {
+
+	public Integer getPowerAdded(String path, Double bandwidth, Integer currentPower) {
 		int pw = 0;
 		CopyDataBase();
 		updatePortTemp(path, bandwidth);
@@ -509,8 +563,7 @@ public class Algorithm_EE {
 			stmt.executeUpdate("DELETE FROM PORTSTATETEMP");
 			stmt.executeUpdate("DELETE FROM NODESTATETEMP");
 			ResultSet rs = stmt.executeQuery("SELECT * FROM NODESTATE");
-			PreparedStatement psInsert = conn
-					.prepareStatement("INSERT INTO NODESTATETEMP VALUES (?,?)");
+			PreparedStatement psInsert = conn.prepareStatement("INSERT INTO NODESTATETEMP VALUES (?,?)");
 			while (rs.next()) {
 				String node = rs.getString(1);
 				String state = rs.getString(2);
@@ -519,8 +572,7 @@ public class Algorithm_EE {
 				psInsert.executeUpdate();
 			}
 			ResultSet rs1 = stmt.executeQuery("SELECT * FROM PORTSTATE");
-			PreparedStatement psInsert1 = conn
-					.prepareStatement("INSERT INTO PORTSTATETEMP VALUES (?,?,?)");
+			PreparedStatement psInsert1 = conn.prepareStatement("INSERT INTO PORTSTATETEMP VALUES (?,?,?)");
 			while (rs1.next()) {
 				String node = rs1.getString(1);
 				Double bw = rs1.getDouble(2);
@@ -582,8 +634,7 @@ public class Algorithm_EE {
 		Statement stmt;
 		Double demandpre = 0.0;
 		try {
-			PreparedStatement psUpdate = conn
-					.prepareStatement("UPDATE PORTSTATE SET BW=(?), STATE=(?) WHERE PORT=(?)");
+			PreparedStatement psUpdate = conn.prepareStatement("UPDATE PORTSTATE SET BW=(?), STATE=(?) WHERE PORT=(?)");
 			stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("SELECT * FROM PORTSTATE");
 			while (rs.next()) {
@@ -647,9 +698,9 @@ public class Algorithm_EE {
 				String name = rs.getString(4);
 				String SE = rs.getString(2);
 				String link = rs.getString(1);
-				if(SE.split(" ")[0]==null || SE.split(" ")[1] == null)
+				if (SE.split(" ")[0] == null || SE.split(" ")[1] == null)
 					System.out.println("Null roi");
-				String SEn = findHost(SE.split(" ")[0],SE.split(" ")[1],name);
+				String SEn = findHost(SE.split(" ")[0], SE.split(" ")[1], name);
 				psUpdate.setString(1, SEn);
 				psUpdate.setString(2, link);
 				psUpdate.setString(3, name);
@@ -663,27 +714,26 @@ public class Algorithm_EE {
 			e.printStackTrace();
 		}
 	}
+
 	public String findHost(String startnode, String endnode, String VNName) {
 		database = new Database();
 		conn = database.connect();
 		String host = null;
-		String start=null;
-		String end=null;
+		String start = null;
+		String end = null;
 		try {
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("SELECT * FROM NODE");
 			while (rs.next()) {
 				String n = rs.getString(1);
 				String name = rs.getString(5);
-				String Name= saveName.get(startnode+" "+endnode);
-				if (startnode.equals(n) && Name.equals(name))
-				{
-					start=rs.getString(3);
+				String Name = saveName.get(startnode + " " + endnode);
+				if (startnode.equals(n) && Name.equals(name)) {
+					start = rs.getString(3);
 				}
-				if (endnode.equals(n) && Name.equals(name))
-				{
-					
-					end=rs.getString(3);
+				if (endnode.equals(n) && Name.equals(name)) {
+
+					end = rs.getString(3);
 				}
 			}
 
@@ -691,7 +741,7 @@ public class Algorithm_EE {
 			// TODO: handle exception
 			e.printStackTrace();
 		}
-		host=start+" "+end;
+		host = start + " " + end;
 		return host;
 	}
 
@@ -700,21 +750,20 @@ public class Algorithm_EE {
 		Statement stmt;
 		Double bwmax = 0.0;
 		try {
-			PreparedStatement psUpdate = conn
-					.prepareStatement("UPDATE NODESTATE SET STATE=(?) WHERE NODE=(?)");
+			PreparedStatement psUpdate = conn.prepareStatement("UPDATE NODESTATE SET STATE=(?) WHERE NODE=(?)");
 			stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("SELECT * FROM PORTSTATE");
 			while (rs.next()) {
 				String port = rs.getString(1);
 				if (port.contains(node)) {
 					Double bw = rs.getDouble(2);
-					if (bwmax < maxBwOfLink-bw) {
-						bwmax = maxBwOfLink-bw;
+					if (bwmax < maxBwOfLink - bw) {
+						bwmax = maxBwOfLink - bw;
 					}
 
 				}
 			}
-			//bwmax=maxBwOfLink-bwmax;
+			// bwmax=maxBwOfLink-bwmax;
 			if (bwmax > 100 && bwmax <= 1000) {
 				psUpdate.setString(1, NODE_1G);
 				psUpdate.setString(2, node);
@@ -743,21 +792,20 @@ public class Algorithm_EE {
 		Statement stmt;
 		Double bwmax = 0.0;
 		try {
-			PreparedStatement psUpdate = conn
-					.prepareStatement("UPDATE NODESTATETEMP SET STATE=(?) WHERE NODE=(?)");
+			PreparedStatement psUpdate = conn.prepareStatement("UPDATE NODESTATETEMP SET STATE=(?) WHERE NODE=(?)");
 			stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("SELECT * FROM PORTSTATETEMP");
 			while (rs.next()) {
 				String port = rs.getString(1);
 				if (port.contains(node)) {
 					Double bw = rs.getDouble(2);
-					if (bwmax < maxBwOfLink-bw) {
-						bwmax = maxBwOfLink-bw;
+					if (bwmax < maxBwOfLink - bw) {
+						bwmax = maxBwOfLink - bw;
 					}
 
 				}
 			}
-//			bwmax=maxBwOfLink-bwmax;
+			// bwmax=maxBwOfLink-bwmax;
 			if (bwmax > 100 && bwmax <= 1000) {
 				psUpdate.setString(1, NODE_1G);
 				psUpdate.setString(2, node);
@@ -783,6 +831,7 @@ public class Algorithm_EE {
 
 	/**
 	 * Just return shortest path
+	 * 
 	 * @param listpath
 	 * @param demand
 	 * @return
@@ -819,15 +868,12 @@ public class Algorithm_EE {
 		return isPass;
 	}
 
-
 	public double getAvailableBandwidth(String SE) {
 		Statement stmt;
 		double bandwidth = 0.0;
 		try {
 			stmt = conn.createStatement();
-			ResultSet rs = stmt
-					.executeQuery("SELECT BW FROM PORTSTATE WHERE PORT='" + SE
-							+ "'");
+			ResultSet rs = stmt.executeQuery("SELECT BW FROM PORTSTATE WHERE PORT='" + SE + "'");
 			rs.next();
 			bandwidth = rs.getDouble(1);
 		} catch (SQLException e) {
@@ -836,8 +882,7 @@ public class Algorithm_EE {
 		return bandwidth;
 	}
 
-	public LinkedList<String> getListPaths(String startNode, String endNode,
-			Topology topo) {
+	public LinkedList<String> getListPaths(String startNode, String endNode, Topology topo) {
 		BFS bfs = new BFS();
 		bfs.setSTART(startNode);
 		bfs.setEND(endNode);
@@ -892,32 +937,31 @@ public class Algorithm_EE {
 			srcreq = rs.getDouble(3);
 			dstreq = rs.getDouble(4);
 			sliceName = rs.getString(5);
-			vLink=rs.getString(6);
+			vLink = rs.getString(6);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 	}
+
 	public void getDemandMin() {
 		String SEget = null;
 		Double demandget = null, srcreqget = null, dstreqget = null;
 		String sliceNameget = null;
-		String vLinkget=null;
-		Double min= Double.MAX_VALUE;
+		String vLinkget = null;
+		Double min = Double.MAX_VALUE;
 		try {
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("SELECT * FROM DEMANDNEW");
-			while (rs.next())
-			{
-			if(rs.getDouble(2)<min)
-			{
-				SEget = rs.getString(1);
-				demandget = rs.getDouble(2);
-				srcreqget = rs.getDouble(3);
-				dstreqget = rs.getDouble(4);
-				sliceNameget = rs.getString(5);
-				vLinkget=rs.getString(6);
-				min=demandget;
-			}
+			while (rs.next()) {
+				if (rs.getDouble(2) < min) {
+					SEget = rs.getString(1);
+					demandget = rs.getDouble(2);
+					srcreqget = rs.getDouble(3);
+					dstreqget = rs.getDouble(4);
+					sliceNameget = rs.getString(5);
+					vLinkget = rs.getString(6);
+					min = demandget;
+				}
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -927,29 +971,28 @@ public class Algorithm_EE {
 		srcreq = srcreqget;
 		dstreq = dstreqget;
 		sliceName = sliceNameget;
-		vLink=vLinkget;
+		vLink = vLinkget;
 	}
+
 	public void getDemandMax() {
 		String SEget = null;
 		Double demandget = null, srcreqget = null, dstreqget = null;
 		String sliceNameget = null;
-		String vLinkget=null;
-		Double max= Double.MIN_VALUE;
+		String vLinkget = null;
+		Double max = Double.MIN_VALUE;
 		try {
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("SELECT * FROM DEMANDNEW");
-			while (rs.next())
-			{
-			if(rs.getDouble(2)>max)
-			{
-				SEget = rs.getString(1);
-				demandget = rs.getDouble(2);
-				srcreqget = rs.getDouble(3);
-				dstreqget = rs.getDouble(4);
-				sliceNameget = rs.getString(5);
-				vLinkget=rs.getString(6);
-				max=demandget;
-			}
+			while (rs.next()) {
+				if (rs.getDouble(2) > max) {
+					SEget = rs.getString(1);
+					demandget = rs.getDouble(2);
+					srcreqget = rs.getDouble(3);
+					dstreqget = rs.getDouble(4);
+					sliceNameget = rs.getString(5);
+					vLinkget = rs.getString(6);
+					max = demandget;
+				}
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -959,10 +1002,10 @@ public class Algorithm_EE {
 		srcreq = srcreqget;
 		dstreq = dstreqget;
 		sliceName = sliceNameget;
-		vLink= vLinkget;
+		vLink = vLinkget;
 	}
-	public void updatePath2DB(String SE, double demand, Topology topo,
-			String sliceName, String vLink) {
+
+	public void updatePath2DB(String SE, double demand, Topology topo, String sliceName, String vLink) {
 		String startNode, endNode;
 		startNode = SE.split(" ")[0];
 		endNode = SE.split(" ")[1];
@@ -970,15 +1013,13 @@ public class Algorithm_EE {
 		database.deletePath();
 		for (String path : listPaths) {
 			if (path.length() != 0)
-				updateNewPaths(path, SE, demand, sliceName,vLink);
+				updateNewPaths(path, SE, demand, sliceName, vLink);
 		}
 	}
 
-	public void updateNewPaths(String path, String SE, double demand,
-			String sliceName, String vLink) {
+	public void updateNewPaths(String path, String SE, double demand, String sliceName, String vLink) {
 		try {
-			PreparedStatement psInsert = conn
-					.prepareStatement("INSERT INTO PATHNEW VALUES (?,?,?,?,?,?)");
+			PreparedStatement psInsert = conn.prepareStatement("INSERT INTO PATHNEW VALUES (?,?,?,?,?,?)");
 			psInsert.setString(1, path);
 			psInsert.setString(2, SE);
 			psInsert.setDouble(3, demand);
@@ -996,8 +1037,7 @@ public class Algorithm_EE {
 		Statement stmt;
 		try {
 			stmt = conn.createStatement();
-			ResultSet rs = stmt
-					.executeQuery("SELECT * FROM PATHNEW ORDER BY COST ASC");
+			ResultSet rs = stmt.executeQuery("SELECT * FROM PATHNEW ORDER BY COST ASC");
 			while (rs.next()) {
 				listPaths.add(rs.getString(1));
 			}
@@ -1008,11 +1048,9 @@ public class Algorithm_EE {
 		return listPaths;
 	}
 
-	public void updateMappingData(String path, String SE, double demand,
-			String sliceName, String vLink) {
+	public void updateMappingData(String path, String SE, double demand, String sliceName, String vLink) {
 		try {
-			PreparedStatement psInsert = conn
-					.prepareStatement("INSERT INTO MAPPINGNEW VALUES (?,?,?,?,?)");
+			PreparedStatement psInsert = conn.prepareStatement("INSERT INTO MAPPINGNEW VALUES (?,?,?,?,?)");
 			psInsert.setString(1, path);
 			psInsert.setString(2, SE);
 			psInsert.setDouble(3, demand);
@@ -1023,12 +1061,13 @@ public class Algorithm_EE {
 			e.printStackTrace();
 		}
 	}
+
 	public void removeDemand(String SE, String sliceName, String vLink) {
 		database.connect();
 		try {
 			Statement stmt = conn.createStatement();
-			stmt.executeUpdate("DELETE FROM DEMANDNEW WHERE SE='" + SE
-					+ "' AND SLICENAME='" + sliceName + "' AND VLINK='" +vLink+"'");
+			stmt.executeUpdate("DELETE FROM DEMANDNEW WHERE SE='" + SE + "' AND SLICENAME='" + sliceName
+					+ "' AND VLINK='" + vLink + "'");
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -1131,7 +1170,7 @@ public class Algorithm_EE {
 				psDelete.setString(1, SE);
 				psDelete.setString(2, sliceName);
 				psDelete.setString(3, vLink);
-				returnBandwidth(SE, sliceName,vLink);
+				returnBandwidth(SE, sliceName, vLink);
 				psDelete.executeUpdate();
 			}
 
@@ -1151,7 +1190,7 @@ public class Algorithm_EE {
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("SELECT * FROM " + tableName);
 			while (rs.next()) {
-				String xx = rs.getString(2) + rs.getString(4)+rs.getString(5);
+				String xx = rs.getString(2) + rs.getString(4) + rs.getString(5);
 				if (listse.contains(xx))
 					continue;
 				else {

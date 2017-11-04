@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import multisite.cluster.model.Topology;
-public class Algorithm_EE_BMapping extends Algorithm_EE{
+public class Algorithm_EE_BMapping extends MVP_Algorithm{
 	
 	public Algorithm_EE_BMapping(){
 		super();

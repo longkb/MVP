@@ -7,7 +7,7 @@ import java.util.Map;
 
 import multisite.cluster.model.modelNetFPGA;
 
-public class Algorithm_EE_Single extends Algorithm_EE {
+public class Algorithm_EE_Single extends MVP_Algorithm {
 	int num;
 
 	public Algorithm_EE_Single() {
