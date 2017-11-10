@@ -5,13 +5,12 @@ import java.sql.Connection;
 import org.json.simple.JSONObject;
 
 import multisite.cluster.model.Database;
-import multisite.cluster.model.DataLoader;
-import multisite.cluster.model.modelNetFPGA;
+import multisite.cluster.model.ResourceGenerator;
 
 public class Mapping {
 	Connection conn;
 	Database database = new Database();
-	DataLoader load_data = new DataLoader();
+	ResourceGenerator data_loader = new ResourceGenerator();
 	JSONObject graph; //Multi-site topo
 	JSONObject clusterDemand;
 	
@@ -44,19 +43,19 @@ public class Mapping {
 			ratioSingleHEE_BFS = 0.0;
 			PSingleHEE_BFS = 0.0;
 			
-			load_data.nNode = nNodes;
-			load_data.alpha = alpha;
-			load_data.beta = beta;
-			load_data.maxDemand = maxDemand;
-			load_data.minDemand = minDemand;
-			System.out.println("Traffic Demand Ratio: " + load_data.minDemand);
+			data_loader.nNode = nNodes;
+			data_loader.alpha = alpha;
+			data_loader.beta = beta;
+			data_loader.maxDemand = maxDemand;
+			data_loader.minDemand = minDemand;
+			System.out.println("Traffic Demand Ratio: " + data_loader.minDemand);
 			
 			for (int i = 0; i < nTime; i++) {
 				//Run nTime mapping demand on topology
 				System.out.print("" + i);
 				Mapping mapping = new Mapping();
-				graph=load_data.createMultiSiteTopo();
-				clusterDemand=load_data.createClusterDemand(graph); //Sinh demand theo demand ratio
+				graph=data_loader.createMultiSiteTopo();
+				clusterDemand=data_loader.createClusterDemand(graph); //Sinh demand theo demand ratio
 				System.out.print("-");
 
 //				mapping.runSingleHEE_BFS(graph, clusterDemand);

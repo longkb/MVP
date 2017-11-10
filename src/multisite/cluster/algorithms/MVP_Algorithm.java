@@ -12,18 +12,17 @@ import java.util.Map;
 import org.json.simple.JSONObject;
 
 import multisite.cluster.model.BFS;
-import multisite.cluster.model.Cluster;
+import multisite.cluster.model.ClusterDemand;
 import multisite.cluster.model.Database;
-import multisite.cluster.model.DataLoader;
+import multisite.cluster.model.ResourceGenerator;
 import multisite.cluster.model.TopoSite;
 import multisite.cluster.model.Topology;
-import multisite.cluster.model.modelNetFPGA;
 
 public class MVP_Algorithm {
 	public Database database;
 	public String sliceName;
 	public String vLink;
-	public DataLoader loadData;
+	public ResourceGenerator loadData;
 	public Connection conn;
 	public BFS bfs;
 	public double maxBwOfLink = 1000;
@@ -38,17 +37,17 @@ public class MVP_Algorithm {
 	public int nFlow = 4;
 	
 	public TopoSite topoSite;
-	public HashMap<String, Cluster>reqClusterList;
+	public HashMap<String, ClusterDemand>reqClusterList;
 
 	public MVP_Algorithm() {
 		nodemapping = new NodeMappingNeighbor();
 		topoSite = new TopoSite();
-		reqClusterList = new HashMap<String, Cluster>();
 	}
 
 	public void initial(JSONObject graph, JSONObject demand) {
-		topoSite.loadTopoFromJSON(graph);
-		topoSite.loadDemandFromJSON(demand);
+		ResourceGenerator loader = new ResourceGenerator();
+		topoSite.sites = loader.loadTopoFromJSON(graph);
+		topoSite.reqClusterList= loader.loadDemandFromJSON(demand);
 	}
 
 	public double MappingRankingLB_MVP(JSONObject graph, JSONObject demand) {

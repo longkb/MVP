@@ -2,7 +2,7 @@ package multisite.cluster.model;
 
 import java.util.LinkedList;
 
-public class Cluster {
+public class ClusterDemand {
 	private String name;
 	private Client client;
 	private int nActive, nStandby;
@@ -11,7 +11,7 @@ public class Cluster {
 	private LinkedList<ClusterNode> standbyNodes;
 	private String status;
 	
-	public Cluster(String name, Client client, int nActive, int nStandby, double reqCap, double reqBW, double syncBW) {
+	public ClusterDemand(String name, Client client, int nActive, int nStandby, double reqCap, double reqBW, double syncBW) {
 		this.name=name;
 		this.client= client;
 		this.nActive=nActive;
@@ -29,7 +29,7 @@ public class Cluster {
 	public void addClusterNode(CloudSite site, ClusterNode node){
 		site.eNodes.add(node);
 		site.capacity -= node.reqCap;
-		site.usedBW += node.reqBW;
+		site.avaiBW += node.reqBW;
 		if(node.role=="ACTIVE") {
 			this.activeNodes.add(node);
 		}else if (node.role=="STANDBY") {

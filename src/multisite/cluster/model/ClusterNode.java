@@ -1,7 +1,7 @@
 package multisite.cluster.model;
 
 public class ClusterNode {
-	private String clusterID;
+	private String clusterNodeID;
 	public Client client;
 	public double X, Y;
 	public double reqCap, reqBW, syncBW;
@@ -9,10 +9,13 @@ public class ClusterNode {
 	public CloudSite locatedCloudSite;
 	
 	public ClusterNode(String clusterID, Client client) {
-		this.clusterID= clusterID;
+		this.clusterNodeID= clusterID;
 		this.client= client;
 	}
-	private void placeOnCloudSite(CloudSite site) {
-		this.locatedCloudSite= site;
+	public String getRole() {
+		return role;
+	}
+	public void setLocatedCloudSite(CloudSite locatedCloudSite) {
+		this.locatedCloudSite = locatedCloudSite;
 	}
 }

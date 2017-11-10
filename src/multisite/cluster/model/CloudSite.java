@@ -13,12 +13,12 @@ public class CloudSite {
 	public double X, Y;
 	
 	public HashMap<String, CloudSite> neighbours; //Neighbor sites
-	public LinkedList<ClusterNode> eNodes; //Embedded cluster nodes
+	public HashMap<String, ClusterNode> mNodes; //Mapped cluster nodes
 	
 	public double totalLinkReq;
 	public double totalLinkResource;
 	public double BWResource;
-	public double usedBW=0;
+	public double avaiBW;
 	public LinkedList<String> neiIDList;
 	
 	public CloudSite(String ID, double capacity, double X, double Y) {
@@ -27,12 +27,12 @@ public class CloudSite {
 		this.X=X;
 		this.Y=Y;
 		this.BWResource=0;
-		this.usedBW=0;
+		this.avaiBW=0;
 		
 		this.neiIDList = new LinkedList<String>();
 		this.neighbours = new HashMap<String, CloudSite>();
 
-		this.eNodes= new LinkedList<ClusterNode>();
+		this.mNodes= new HashMap<String, ClusterNode>();
 	}
 	public void addNeighbour(CloudSite site) {
 		this.neighbours.put(site.ID, site);
@@ -49,4 +49,8 @@ public class CloudSite {
 	public void addBWResouce(double addtionalBW) {
 		this.BWResource+=addtionalBW/2;
 	}
+	public void mapClusterNodeOnSite(ClusterNode mappedNode) {
+		
+	}
+	
 }

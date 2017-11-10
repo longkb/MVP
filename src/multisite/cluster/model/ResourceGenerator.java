@@ -1,28 +1,13 @@
 package multisite.cluster.model;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.charset.Charset;
-import java.nio.file.DirectoryNotEmptyException;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -31,7 +16,7 @@ import org.json.simple.JSONObject;
  * @author LongKB
  *
  */
-public class DataLoader {
+public class ResourceGenerator {
 	//Parameters
 	public int nNode;
 	public int maxDemand;
@@ -41,8 +26,6 @@ public class DataLoader {
 	public String dir = "";
 	public static final int BANDWIDTH = 1000;
 
-	private Database database;
-	private Connection conn;
 	private double load,tempLoad;
 	private double totalCap,totalBW;
 	private double clusterNodeReq,clientBWReq;
@@ -55,71 +38,9 @@ public class DataLoader {
 	public static double N=1, M=1;
 	
 	
-	public DataLoader() {
+	public ResourceGenerator() {
 		topo=new Topology();
 		listSite=new LinkedList<String>();
-	}
-
-	public void convertDemand(Map<String, String> Name) {
-		database = new Database();
-		conn = database.connect();
-		try {
-			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt.executeQuery("SELECT * FROM DEMANDNEW");
-			PreparedStatement psUpdate = conn
-					.prepareStatement("UPDATE DEMANDNEW SET SE =(?) WHERE SE =(?) AND SLICENAME=(?)");
-			while (rs.next()) {
-				String link = rs.getString(1);
-				String sliceName = rs.getString(5);
-				String SE = findHost(link.split(" ")[0], link.split(" ")[1],
-						sliceName, Name);
-				if (SE!=null) {
-					psUpdate.setString(1, SE);
-					psUpdate.setString(2, link);
-					psUpdate.setString(3, sliceName);
-					psUpdate.executeUpdate();
-				}
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-	}
-
-	public String findHost(String startnode, String endnode, String VNName,
-			Map<String, String> saveName) {
-		database = new Database();
-		conn = database.connect();
-		String host = null;
-		String start = null;
-		String end = null;
-		String Name = null;
-		try {
-			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt.executeQuery("SELECT * FROM NODE");
-			Name = VNName;
-			while (rs.next()) {
-				String n = rs.getString(3);
-				if(rs.getString(5).equals("-"))
-					continue;
-				String name = rs.getString(5).split("_")[1];
-				if (startnode.equals(n) && Name.equals(name)) {
-					start = rs.getString(1);
-				}
-				if (endnode.equals(n) && Name.equals(name)) {
-					end = rs.getString(1);
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		if(start!=null && end!=null)
-		{
-			host = start + " " + end;
-//			System.out.println("dsd "+host);
-			saveName.put(host, Name);
-		}
-		return host;
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -265,7 +186,7 @@ public class DataLoader {
 		}
 		
 		double reqBW = getRandomBandwidth(upTh,dwTh); //Băng thông request từ client đến active node
-		double syncBW = getRandomBandwidth((int)reqBW,dwTh/2); //băng thông dùng cho state transfer từ active đến standby
+		double syncBW = getRandomBandwidth((int)reqBW/3,dwTh/4); //băng thông dùng cho state transfer từ active đến standby
 		clientBWReq+=(reqBW+syncBW)*nActive;
 		
 		double nodeCap=getRandomNodeCapacity(upNodeCapTh, dwNodeCapTh); //Sinh random capacity request cho các node trong cluster
@@ -356,6 +277,116 @@ public class DataLoader {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public HashMap<String, CloudSite> loadTopoFromJSON(JSONObject graph) {
+		//Returned variables
+		HashMap<String, CloudSite> sites = new HashMap<String, CloudSite>();
+		HashMap<String, Link> links = new HashMap<String, Link>();
+		//JSON variables
+		JSONObject siteJSONList = (JSONObject) graph.get("Site");
+		JSONObject linkList = (JSONObject) graph.get("Link");
+		Iterator<JSONObject> iter = linkList.values().iterator();
+		JSONObject linkJSON;
+		String dst, src;
+		Double bw, distance;
+		JSONObject srcJSON, dstJSON;
+		CloudSite srcSite, dstSite;
+		while (iter.hasNext()) {
+			linkJSON = iter.next();
+			src = (String) linkJSON.get("src");
+			dst = (String) linkJSON.get("dst");
+			bw = (Double) linkJSON.get("Bandwidth");
+			distance = (Double) linkJSON.get("Distance");
+
+			if (src.equals(dst))
+				continue;
+
+			// Get site from JSON
+			if (!sites.containsKey(src)) {
+				srcJSON = (JSONObject) siteJSONList.get(src);
+				String ID = (String) srcJSON.get("ID");
+				double capacity = (double) srcJSON.get("Capacity");
+				double X = (double) srcJSON.get("X");
+				double Y = (double) srcJSON.get("Y");
+
+				srcSite = new CloudSite(ID, capacity, X, Y);
+				srcSite.setNeighbourIDList((JSONArray) srcJSON.get("Neighbor"));
+				sites.put(ID, srcSite);
+			} else {
+				srcSite = sites.get(src);
+			}
+
+			if (!sites.containsKey(dst)) {
+				dstJSON = (JSONObject) siteJSONList.get(dst);
+				String ID = (String) dstJSON.get("ID");
+				double capacity = (double) dstJSON.get("Capacity");
+				double X = (double) dstJSON.get("X");
+				double Y = (double) dstJSON.get("Y");
+
+				dstSite = new CloudSite(ID, capacity, X, Y);
+				dstSite.setNeighbourIDList((JSONArray) dstJSON.get("Neighbor"));
+
+				sites.put(ID, dstSite);
+			} else {
+				dstSite = sites.get(dst);
+			}
+
+			// Get link from JSON
+			if (!links.containsKey(src + " " + dst)) {
+				Link link = new Link(srcSite, dstSite, bw, distance);
+				links.put(src + " " + dst, link);
+			}
+		}
+		//Add BWresouce to cloud sites
+		double BWresouce=0;
+		for (Link link: links.values()) {
+			link.src.addBWResouce(link.BW);
+			link.dst.addBWResouce(link.BW);
+		}
+		//Add neighbour to cloud sites
+		CloudSite neiSite;
+		for (CloudSite site: sites.values()) {
+			LinkedList<String> neiIDList = site.neiIDList;
+			for(String id : neiIDList) {
+				neiSite = sites.get(id);
+				site.addNeighbour(neiSite);
+			}
+		}
+		return sites;
+	}
+
+	public HashMap<String, ClusterDemand> loadDemandFromJSON(JSONObject demand) {
+		HashMap<String, ClusterDemand> reqClusterList = new HashMap<String, ClusterDemand>();
+		
+		Iterator<JSONObject> iter = demand.values().iterator();
+		JSONObject reqClusterJSON, configJSON, clientJSON;
+		ClusterDemand reqCluster;
+		Client client;
+		while (iter.hasNext()) {
+			reqClusterJSON = iter.next();
+			String name = (String) reqClusterJSON.get("Name");
+
+			// Get cluster config
+			configJSON = (JSONObject) reqClusterJSON.get("Configuration");
+			try {
+				int nActive = (int) configJSON.get("Active");
+				int nStandby = (int) configJSON.get("Standby");
+				double syncBW = (double) configJSON.get("syncBW");
+				double reqBW = (double) configJSON.get("reqBW");
+				double reqCap = (double) configJSON.get("reqCapacity");
+
+				// Get client config
+				clientJSON = (JSONObject) reqClusterJSON.get("Client");
+				double X = (double) clientJSON.get("X");
+				double Y = (double) clientJSON.get("Y");
+				client = new Client(X, Y);
+				reqCluster = new ClusterDemand(name, client, nActive, nStandby, reqCap, reqBW, syncBW);
+				reqClusterList.put(name, reqCluster);
+			} catch (NullPointerException e) {
+			}
+		}
+		return reqClusterList;
 	}
 
 }

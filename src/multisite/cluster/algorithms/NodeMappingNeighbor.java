@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 
 import multisite.cluster.model.CloudSite;
+import multisite.cluster.model.ClusterDemand;
 import multisite.cluster.model.Link;
 import multisite.cluster.model.SubStrateNode;
 import multisite.cluster.model.TopoSite;
@@ -24,20 +25,20 @@ import multisite.cluster.model.VirtualNode;
 public class NodeMappingNeighbor extends NodeMapping{
 	public HashMap<String, CloudSite> sites;
 	public HashMap<String, Link> links;
+	public HashMap<String, ClusterDemand> clusterDemands;
 	public HashMap<String,VirtualNet>vNets;
-	/**
-	 * Hàm tạo
-	 */
+
 	public NodeMappingNeighbor() {
 		super();
 	}
 
 	public void nodeMappingNeighborID(TopoSite topoSite) {
 		System.out.println("Node Mapping neighbors new");
-		HashMap<String, CloudSite> sortedSites;
 		this.sites = topoSite.getSites();
 		this.links = topoSite.getLinks();
-		sortedSites = sortBySiteNeighbor(this.sites);
+		this.clusterDemands = topoSite.getReqClusterList();
+		
+		HashMap<String, CloudSite> sortedSites = sortSiteByNeighbor(this.sites);
 		getVirtualNodes();
 //		sortByID();
 //		mapvNodeByID();
@@ -392,7 +393,7 @@ public class NodeMappingNeighbor extends NodeMapping{
 	 * 
 	 * @param map
 	 */
-	public HashMap<String, CloudSite> sortBySiteNeighbor(HashMap<String, CloudSite> sites) {
+	public HashMap<String, CloudSite> sortSiteByNeighbor(HashMap<String, CloudSite> sites) {
 		List<Map.Entry<String, CloudSite>> list = new LinkedList<>(
 				sites.entrySet());
 		Collections.sort(list,new Comparator<Map.Entry<String, CloudSite>>() {
