@@ -1,5 +1,7 @@
 package multisite.cluster.model;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -11,6 +13,8 @@ import java.util.Random;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 /**
  * @author LongKB
@@ -30,8 +34,8 @@ public class ResourceGenerator {
 	private double totalCap,totalBW;
 	private double clusterNodeReq,clientBWReq;
 	
-	private int upTh=600, dwTh=200; //Threshold for Bandwidth randomize
-	private int upCap=10,dwCap=6; //Threshold for site capacity randomize
+	private int upTh=800, dwTh=300; //Threshold for Bandwidth randomize
+	private int upCap=9,dwCap=3; //Threshold for site capacity randomize
 	private Random rand;
 	public Topology topo;
 	public LinkedList<String>listSite;
@@ -45,6 +49,7 @@ public class ResourceGenerator {
 
 	@SuppressWarnings("rawtypes")
 	public JSONObject createMultiSiteTopo() {
+		totalCap=0;
 		WaxmanGenerator waxman = new WaxmanGenerator(0.0,100.0, 0.0, 100.0);
 
 		JSONObject graph;
@@ -102,31 +107,23 @@ public class ResourceGenerator {
 		int nSites=((JSONObject)graph.get("Site")).size();
 				
 		load=(double)maxDemand/100;
-		tempLoad=0;
-		//Mỗi link giữa 2 site có băng thông là BANDWIDTH, mỗi site có thêm 1 link ra ngoài external với băng thông là Bandwidth
-		totalBW=nLinks/2*BANDWIDTH + nSites*BANDWIDTH; 
+		//Mỗi link giữa 2 site có băng thông là BANDWIDTH
+		totalBW=nLinks/2*BANDWIDTH; 
+
+		double BWRatio, capRatio;
+		
+		rand= new Random();
 		
 		clusterNodeReq=0;
 		clientBWReq=0;
-		
-		//MIN MAX Tọa độ của client
-		double xmax=100.0;
-		double xmin=0;
-		double ymax=100.0;
-		double ymin=0.0;
-		
-		rand= new Random();
+		tempLoad=0;
 		int nCluster=0;
 		while (true) {
 			nCluster+=1;
-			String clusterName="Cluster0"+String.valueOf(nCluster);
+			String clusterName="R"+String.valueOf(nCluster);
 			//Tạo JSON để lưu cluster request từ client
 			JSONObject clusterJSON=new JSONObject();
 			clusterJSON.put("Name", clusterName);
-			
-			//Tạo JSON để lưu tọa độ XY của client
-			JSONObject clientXYJSON=new JSONObject();
-			clusterJSON.put("Client", clientXYJSON);
 			
 			//Tạo JSON để lưu cấu hình của cluster
 			JSONObject configurationJSON=new JSONObject();
@@ -134,10 +131,6 @@ public class ResourceGenerator {
 			
 			//Thêm clusterJSON vào list
 			clusterRequestList.put(clusterName, clusterJSON);
-			
-			//Sinh random tọa độ cho client
-			clientXYJSON.put("X", (xmax-xmin)*rand.nextDouble());
-			clientXYJSON.put("Y", (ymax-ymin)*rand.nextDouble());
 
 			if (genClusterDemand(clusterName, configurationJSON)) {
 				break;
@@ -147,12 +140,14 @@ public class ResourceGenerator {
 				clusterRequestList.remove(clusterName);
 			}
 		}
-		System.out.println("\nBandwidth: "+clientBWReq);
-		System.out.println("Total BW: "+totalBW);
-		System.out.println("Capacity: "+clusterNodeReq);
-		System.out.println("Total Cap: "+totalCap);
-		System.out.println("BW ratio: "+ clientBWReq/totalBW);
-		System.out.println("Cap ratio: "+ clusterNodeReq/totalCap);
+		BWRatio=clientBWReq/totalBW;
+		capRatio=clusterNodeReq/totalCap;
+//		System.out.println("\nBandwidth: "+clientBWReq);
+//		System.out.println("Total BW: "+totalBW);
+//		System.out.println("Capacity: "+clusterNodeReq);
+//		System.out.println("Total Cap: "+totalCap);
+//		System.out.println("BW ratio: "+ BWRatio);
+//		System.out.println("Cap ratio: "+ capRatio);
 		
 		writeToFile(clusterRequestList, dir+"clusterDemand.txt");
 		return clusterRequestList;
@@ -167,9 +162,9 @@ public class ResourceGenerator {
 	public boolean genClusterDemand(String clusterName, JSONObject configurationJSON){
 		i=0;
 		//Ngưỡng để random số active, standby node
-		int upTh_nNodes=4;
-		int upNodeCapTh=4; //Up threshold is 50
-		int dwNodeCapTh=2;
+		int upTh_nNodes=3;
+		int upNodeCapTh=5; //Up threshold is 40
+		int dwNodeCapTh=1;
 		int nActive;
 		int nStandby;
 		double srcReq, dstReq, newLoad;
@@ -177,7 +172,7 @@ public class ResourceGenerator {
 
 		//Random số active, standby node trong cluster
 		nActive=rand.nextInt(upTh_nNodes)+1;
-		nStandby=rand.nextInt(nActive)+1;
+		nStandby=1;
 
 		tempLoad=getLoad(clusterNodeReq, clientBWReq); //load trước khi sinh demand
 		//Nếu độ chênh lệch của load hiện tại và load đặt ra quá nhỏ, bỏ qua, ko cần tạo thêm demand nữa
@@ -185,62 +180,64 @@ public class ResourceGenerator {
 			return true;
 		}
 		
-		double reqBW = getRandomBandwidth(upTh,dwTh); //Băng thông request từ client đến active node
-		double syncBW = getRandomBandwidth((int)reqBW/3,dwTh/4); //băng thông dùng cho state transfer từ active đến standby
-		clientBWReq+=(reqBW+syncBW)*nActive;
+//		double reqBW = getRandomBandwidth(upTh,dwTh); //Băng thông request từ client đến active node
+
+		double syncBW = getRandomBandwidth(upTh,dwTh); //băng thông dùng cho state transfer từ active đến standby
+		clientBWReq+=syncBW*nActive;
 		
 		double nodeCap=getRandomNodeCapacity(upNodeCapTh, dwNodeCapTh); //Sinh random capacity request cho các node trong cluster
-		clusterNodeReq+=(nActive+nStandby)*nodeCap; 
+		clusterNodeReq+=(1+nStandby)*nActive*nodeCap; 
 		
 		newLoad=getLoad(clusterNodeReq,clientBWReq);  //Load sau khi sinh demand
 		//Nếu load mới bằng load đặt ra, thêm demand thành công
 		if(newLoad==load){ 
-			addNewDemand(configurationJSON, nActive, nStandby, nodeCap, reqBW, syncBW);
+			addNewDemand(configurationJSON, nActive, nStandby, nodeCap, 0, syncBW);
 			return true;
 		}
 		//Nếu load mới lớn hơn load đặt ra, loại bỏ demand vừa rồi. Update lại load cũ bằng cách thêm 1 lượng BW vào các req BW
 		if (newLoad > load) {
-			clientBWReq=clientBWReq-(reqBW+syncBW)*nActive;
-			clusterNodeReq=clusterNodeReq-(nActive+nStandby)*nodeCap;
+			clientBWReq=clientBWReq-syncBW*nActive;
+			clusterNodeReq=clusterNodeReq-(1+nStandby)*nActive*nodeCap;
 			
 			double BW=0;
 			while(BW<=0 || BW>upTh){
-				if (i>50) {
+				if (i>100) {
 					return true;
 				}
 				//Random số active, standby node trong cluster
 				nActive=rand.nextInt(upTh_nNodes)+1;
-				nStandby=rand.nextInt(nActive)+1;
+				nStandby=1;
 
 				nodeCap=getRandomNodeCapacity(upNodeCapTh, dwNodeCapTh); //Sinh random capacity request cho các node trong cluster
-				double deltaNode=nodeCap*(nActive+nStandby);
+				double deltaNode=nodeCap*nActive*(1+nStandby);
 				
 				//Gen random BWReq
 				double delta=load-tempLoad;
 				BW=(delta*(N+M)-N*deltaNode/totalCap)/M*totalBW;
 				
-				reqBW=BW/(2*nActive);
-				syncBW=BW/(2*nActive);
-				reqBW=(double)((int)(reqBW/10)*10); //Làm tròn
+//				reqBW=BW/(2*nActive);
+//				syncBW=BW/(2*nActive);
+//				reqBW=(double)((int)(reqBW/10)*10); //Làm tròn
+				syncBW=BW;
 				syncBW=(double)((int)(syncBW/10)*10); //Làm tròn
 
-				clientBWReq+=(reqBW+syncBW)*nActive;
-				clusterNodeReq+=(nActive+nStandby)*nodeCap; 
+				clientBWReq+=syncBW*nActive;
+				clusterNodeReq+=(1+nStandby)*nActive*nodeCap; 
 				
-				if (reqBW>0 && reqBW<=upTh) {
-					addNewDemand(configurationJSON, nActive, nStandby, nodeCap, reqBW, syncBW);
+				if (syncBW>0 && syncBW<=upTh) {
+					addNewDemand(configurationJSON, nActive, nStandby, nodeCap, 0, syncBW);
 					return true;
 				}else if (BW==0) {
 					break;
 				}else {
 					i++;
-					clientBWReq=clientBWReq-(reqBW+syncBW)*nActive;
-					clusterNodeReq=clusterNodeReq-(nActive+nStandby)*nodeCap;
+					clientBWReq=clientBWReq-syncBW*nActive;
+					clusterNodeReq=clusterNodeReq-(1+nStandby)*nActive*nodeCap;
 				}
 			}
 			return true;
 		}
-		addNewDemand(configurationJSON, nActive, nStandby, nodeCap, reqBW, syncBW);
+		addNewDemand(configurationJSON, nActive, nStandby, nodeCap, 0, syncBW);
 		return false;
 	}
 	/*
@@ -279,7 +276,20 @@ public class ResourceGenerator {
 		}
 	}
 
-	public HashMap<String, CloudSite> loadTopoFromJSON(JSONObject graph) {
+	public void loadTopoFromJSON(TopoSite topoSite, Topology topo) {
+		JSONParser parser = new JSONParser();
+		JSONObject graph = null;
+		try {
+			Object obj = parser.parse(new FileReader(
+			        "multisiteTopo.txt"));
+			graph = (JSONObject) obj;
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
 		//Returned variables
 		HashMap<String, CloudSite> sites = new HashMap<String, CloudSite>();
 		HashMap<String, Link> links = new HashMap<String, Link>();
@@ -289,7 +299,7 @@ public class ResourceGenerator {
 		Iterator<JSONObject> iter = linkList.values().iterator();
 		JSONObject linkJSON;
 		String dst, src;
-		Double bw, distance;
+		Double bw;
 		JSONObject srcJSON, dstJSON;
 		CloudSite srcSite, dstSite;
 		while (iter.hasNext()) {
@@ -297,20 +307,19 @@ public class ResourceGenerator {
 			src = (String) linkJSON.get("src");
 			dst = (String) linkJSON.get("dst");
 			bw = (Double) linkJSON.get("Bandwidth");
-			distance = (Double) linkJSON.get("Distance");
 
 			if (src.equals(dst))
 				continue;
-
+			//For Routing
+			topo.addNeighbor(src, dst);
+			
 			// Get site from JSON
 			if (!sites.containsKey(src)) {
 				srcJSON = (JSONObject) siteJSONList.get(src);
 				String ID = (String) srcJSON.get("ID");
 				double capacity = (double) srcJSON.get("Capacity");
-				double X = (double) srcJSON.get("X");
-				double Y = (double) srcJSON.get("Y");
 
-				srcSite = new CloudSite(ID, capacity, X, Y);
+				srcSite = new CloudSite(ID, capacity);
 				srcSite.setNeighbourIDList((JSONArray) srcJSON.get("Neighbor"));
 				sites.put(ID, srcSite);
 			} else {
@@ -321,10 +330,8 @@ public class ResourceGenerator {
 				dstJSON = (JSONObject) siteJSONList.get(dst);
 				String ID = (String) dstJSON.get("ID");
 				double capacity = (double) dstJSON.get("Capacity");
-				double X = (double) dstJSON.get("X");
-				double Y = (double) dstJSON.get("Y");
 
-				dstSite = new CloudSite(ID, capacity, X, Y);
+				dstSite = new CloudSite(ID, capacity);
 				dstSite.setNeighbourIDList((JSONArray) dstJSON.get("Neighbor"));
 
 				sites.put(ID, dstSite);
@@ -334,7 +341,7 @@ public class ResourceGenerator {
 
 			// Get link from JSON
 			if (!links.containsKey(src + " " + dst)) {
-				Link link = new Link(srcSite, dstSite, bw, distance);
+				Link link = new Link(srcSite, dstSite, bw);
 				links.put(src + " " + dst, link);
 			}
 		}
@@ -353,16 +360,30 @@ public class ResourceGenerator {
 				site.addNeighbour(neiSite);
 			}
 		}
-		return sites;
+		topoSite.links=links;
+		topoSite.sites=sites;
 	}
 
-	public HashMap<String, ClusterDemand> loadDemandFromJSON(JSONObject demand) {
+	public void loadDemandFromJSON(TopoSite topoSite) {
+		JSONParser parser = new JSONParser();
+		JSONObject demand=null;
+		try {
+			Object obj = parser.parse(new FileReader(
+			        "clusterDemand.txt"));
+			demand = (JSONObject) obj;
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
 		HashMap<String, ClusterDemand> reqClusterList = new HashMap<String, ClusterDemand>();
 		
 		Iterator<JSONObject> iter = demand.values().iterator();
 		JSONObject reqClusterJSON, configJSON, clientJSON;
 		ClusterDemand reqCluster;
-		Client client;
 		while (iter.hasNext()) {
 			reqClusterJSON = iter.next();
 			String name = (String) reqClusterJSON.get("Name");
@@ -370,23 +391,19 @@ public class ResourceGenerator {
 			// Get cluster config
 			configJSON = (JSONObject) reqClusterJSON.get("Configuration");
 			try {
-				int nActive = (int) configJSON.get("Active");
-				int nStandby = (int) configJSON.get("Standby");
+				Long n = (Long) configJSON.get("Active");
+				int nActive = n.intValue();
+				n = (Long)configJSON.get("Standby");
+				int nStandby = n.intValue();
 				double syncBW = (double) configJSON.get("syncBW");
 				double reqBW = (double) configJSON.get("reqBW");
 				double reqCap = (double) configJSON.get("reqCapacity");
-
-				// Get client config
-				clientJSON = (JSONObject) reqClusterJSON.get("Client");
-				double X = (double) clientJSON.get("X");
-				double Y = (double) clientJSON.get("Y");
-				client = new Client(X, Y);
-				reqCluster = new ClusterDemand(name, client, nActive, nStandby, reqCap, reqBW, syncBW);
+				reqCluster = new ClusterDemand(name, nActive, nStandby, reqCap, reqBW, syncBW);
 				reqClusterList.put(name, reqCluster);
 			} catch (NullPointerException e) {
 			}
 		}
-		return reqClusterList;
+		topoSite.reqClusterList=reqClusterList;
 	}
 
 }

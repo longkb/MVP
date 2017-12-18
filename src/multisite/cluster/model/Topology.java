@@ -21,17 +21,7 @@ public class Topology {
 	public Map<String, Double>linkBandwidth;
 	public LinkedList<String> forgetLink;
 	
-	public Topology(Connection conn) {
-		database=new Database();
-		this.conn=conn;
-		map=new HashMap<String, LinkedHashSet<String>>();
-		linkBandwidth=new HashMap<String,Double>();
-		forgetLink=new LinkedList<String>();
-	}
-	
 	public Topology() {
-		database=new Database();
-//		conn=database.connect();
 		map=new HashMap<String, LinkedHashSet<String>>();
 		linkBandwidth=new HashMap<String,Double>();
 		forgetLink=new LinkedList<String>();

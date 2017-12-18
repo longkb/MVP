@@ -1,10 +1,4 @@
 package multisite.cluster.algorithms;
-/**
- * @author LongKB
- */
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,113 +6,163 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import multisite.cluster.model.CloudSite;
 import multisite.cluster.model.ClusterDemand;
+import multisite.cluster.model.ClusterNode;
 import multisite.cluster.model.Link;
-import multisite.cluster.model.SubStrateNode;
 import multisite.cluster.model.TopoSite;
-import multisite.cluster.model.VirtualNet;
-import multisite.cluster.model.VirtualNode;
 
 public class NodeMappingNeighbor extends NodeMapping{
 	public HashMap<String, CloudSite> sites;
 	public HashMap<String, Link> links;
 	public HashMap<String, ClusterDemand> clusterDemands;
-	public HashMap<String,VirtualNet>vNets;
+	public HashMap<String,ClusterNode> clusterNodes;
 
 	public NodeMappingNeighbor() {
 		super();
 	}
-
-	public void nodeMappingNeighborID(TopoSite topoSite) {
-		System.out.println("Node Mapping neighbors new");
+	/**
+	 * Heuristic Load balacner NFV placement
+	 * Phân bổ tải đi đều các node, tối thiểu hóa average node utilization
+	 * @param topoSite
+	 */
+	public void HLB_P(TopoSite topoSite) {
+//		System.out.println("\nHLB-P Node mapping");
 		this.sites = topoSite.getSites();
 		this.links = topoSite.getLinks();
 		this.clusterDemands = topoSite.getReqClusterList();
 		
-		HashMap<String, CloudSite> sortedSites = sortSiteByNeighbor(this.sites);
-		getVirtualNodes();
-//		sortByID();
-//		mapvNodeByID();
-	}
-
-	/**
-	 * VNE: Node Mapping Neighbor
-	 * 
-	 * @return
-	 */
-	public void nodeMappingNeighbor() {
-		System.out.println("Node Mapping neighbors");
-		initial();
-		sortBysNodeNeighbor();
-		getVirtualNodes();
-		sortByVNodeNei();
-		mapvNodeByNeighbor();
-	}
-	/**
-	 * VNE: Node Mapping Ranking theo VNet
-	 * 
-	 * @return
-	 */
-	public void nodeMappingNodeRanking() {
-		System.out.println("Node Ranking");
-		initial();
-		getsNodes();
-//		sortBysNodeNeighbor();
-		RankingsNode();
-		getVirtualNodes();
-		getvNets();
-		sortvNetByNeighbors();
-		mapvNodesByNodeRanking();
-	}
-	/**
-	 * VNE: Node Mapping theo Topo aware
-	 */
-	public void nodeMappingTopoAware() {
-		System.out.println("Node Mapping TopoAware");
-		initial();
-		getsNodes();
-		sortBysNodeRank();
-		getVirtualNodes();
-//		sortByVNodeRank();
-		getvNets();
-		mapvNodesByTopoAware();
+		HashMap<String, CloudSite> sortedSites = sort_Site_NeiDec_CapUInc(this.sites);
+		this.clusterNodes = getClusterNodes(this.clusterDemands);
+		HashMap<String, ClusterNode> sortedReqNodes= sort_ClusterNode_NeiDec_RankDec(this.clusterNodes); //Sort by NeiDec_RankDec
+		HashMap<String, ClusterNode> filtedReqNodes= filterByClusterID(sortedReqNodes);  //Filted by ClusterID
+		mapvNode_HLB_P(sortedSites, filtedReqNodes);
 	}
 	
 	/**
-	 * Map Virtual Node on suitable Substrate Node 
+	 * Capacity Greedy Node Mapping
+	 * Ưu tiên map theo Capacity
 	 */
-	public void mapvNodeByNeighbor() {
-		String vNode_VN;
-		VirtualNode vNode;
+	public void NeighborGreedy_P(TopoSite topoSite) {
+//		System.out.println("\nNeighbor Greedy nodemapping");
+		this.sites = topoSite.getSites();
+		this.links = topoSite.getLinks();
+		this.clusterDemands = topoSite.getReqClusterList();
+		
+		HashMap<String, CloudSite> sortedSites = sort_Site_NeiDec_CapUInc(this.sites);
+		this.clusterNodes = getClusterNodes(this.clusterDemands);
+		HashMap<String, ClusterNode> sortedReqNodes= sort_ClusterNode_NeiDec_RankDec(this.clusterNodes);
+		mapvNodeByNeighborAPAN(sortedSites, sortedReqNodes);
+	}
+	/**
+	 * Random Fit placement
+	 * Ưu tiên map một cách Random
+	 */
+	public void RF_P(TopoSite topoSite) {
+//		System.out.println("\nRandom Fit Node mapping");
+		this.sites = topoSite.getSites();
+		this.links = topoSite.getLinks();
+		this.clusterDemands = topoSite.getReqClusterList();
+		
+		this.clusterNodes = getClusterNodes(this.clusterDemands);
+		randomFitNodeMapping(this.sites, this.clusterNodes);
+	}
+	public HashMap<String,ClusterNode> filterByClusterID(HashMap<String, ClusterNode> clusterNodes){
+		HashMap<String,ClusterNode> filterNodes = new LinkedHashMap<>();
+		for(ClusterNode node: clusterNodes.values()) {
+			String currentClusterID = node.clusterID;
+			filterNodes.putIfAbsent(node.nodeID_clusterID, node);
+			
+			for(ClusterNode nodev2: clusterNodes.values()) {
+				if(nodev2.clusterID.equals(currentClusterID)) {
+					filterNodes.putIfAbsent(nodev2.nodeID_clusterID, nodev2);
+				}
+			}
+		}
+		return filterNodes;
+	}
+	/**
+	 * HLB-P Node Mapping 
+	 */
+	public void mapvNode_HLB_P(HashMap<String, CloudSite> sites, HashMap<String, ClusterNode> clusterNodes) {
+		String nodeID_clusterID;
 		//Turn on the first node
-		for(String skey:sNodes.keySet()){
-			sNodes.get(skey).state=true;
+		for(CloudSite site: sites.values()){
+			site.isUsed=true;
 			break;
 		}
-		Set<String>keys=vNodes.keySet();
-		for(String key:keys){
-			vNode=vNodes.get(key);
-//			System.out.println("\nDuyet "+vNode.name+" thuoc demand "+vNode.SE_VN);
-			vNode_VN=vNode.vNode_VN;
-//			System.out.println(vNode_VN);
-//			System.out.println(vNode.neighbor);
+		for(ClusterNode reqNode: clusterNodes.values()) {
+			nodeID_clusterID = reqNode.nodeID+"_"+reqNode.clusterID;
+			boolean canUse;
+			//Resort cloud sites
+			sites=sort_Site_NeiDec_CapUInc(this.sites); 
+			for(CloudSite site:sites.values()) {
+				canUse=true;
+				for(ClusterNode mNode:site.mNodes.values()) {
+					if(mNode.neiList.keySet().contains(nodeID_clusterID))
+						canUse=false;
+				}
+				//If the current site is not using now
+				if(site.isUsed==false) {
+					boolean hasNeighborUsed = false;
+					for(CloudSite neiSite:site.neighbours.values()) {
+						if(neiSite.isUsed=true) {
+							hasNeighborUsed=true;
+							break;
+						}
+					}
+					if(!hasNeighborUsed)
+						canUse=false;
+				}
+				//If total bandwidth requirement is bigger than total site resource
+				if(!canUse)
+					continue;
+				if(site.mNodes.values().contains(nodeID_clusterID)==false && site.avaiCap>=reqNode.reqCap) {
+					boolean hasNeighbour = false;
+					for(String nei:reqNode.neiList.keySet()) {
+						if(site.mNodes.keySet().contains(nei)) {
+							hasNeighbour=true;
+						}
+					}
+					if(hasNeighbour)
+						continue;
+					site.mapClusterNode(reqNode);
+					break;
+				}
+			}
+		}
+//		System.out.println("\n\nMapped nodes");
+//		for(CloudSite s : sites.values()) {
+//			System.out.println("Site "+s.ID+": "+s.mNodes.keySet());
+//			System.out.println("Avai capacity: "+ s.avaiCap);
+//		}
+	}
+
+	/**
+	 * Neighbour Node mapping algorithms
+	 */
+	public void mapvNodeByNeighborAPAN(HashMap<String, CloudSite> sites, HashMap<String, ClusterNode> clusterNodes) {
+		String nodeID_clusterID;
+		//Turn on the first node
+		for(CloudSite site: sites.values()){
+			site.isUsed=true;
+			break;
+		}
+		for(ClusterNode reqNode: clusterNodes.values()) {
+			nodeID_clusterID = reqNode.nodeID+"_"+reqNode.clusterID;
 			boolean canTurnOn;
-			//Nếu vNode chưa được bật
-			for(String skey:sNodes.keySet()){
-				SubStrateNode sNode=sNodes.get(skey);
+			for(CloudSite site:sites.values()) {
 				canTurnOn=true;
-				for(VirtualNode vir:sNode.vNodes){
-					if(vir.neighbor.contains(vNode.vNode_VN))
+				for(ClusterNode mNode:site.mNodes.values()) {
+					if(mNode.neiList.keySet().contains(nodeID_clusterID))
 						canTurnOn=false;
 				}
-				//If the current sNode is not turn on
-				if(sNode.state==false){
-					boolean hasNeighborOn=false;
-					for(SubStrateNode nei:sNode.neighbors){
-						if (nei.state==true) {
+				//If the current site is not using now
+				if(site.state==false) {
+					boolean hasNeighborOn = false;
+					for(CloudSite neiSite:site.neighbours.values()) {
+						if(neiSite.state=true) {
 							hasNeighborOn=true;
 							break;
 						}
@@ -126,274 +170,63 @@ public class NodeMappingNeighbor extends NodeMapping{
 					if(!hasNeighborOn)
 						canTurnOn=false;
 				}
-//				If total bandwidth requirement is bigger than total substrate resource
-				System.out.println(sNode.usedBW+vNode.outGoingBW);
-				System.out.println(sNode.outGoingBW);
-//				if(sNode.usedBW+vNode.outGoingBW>sNode.outGoingBW)
-//					canTurnOn=false;
-				if (!canTurnOn) {
+				//If total bandwidth requirement is bigger than total site resource
+				if(!canTurnOn)
 					continue;
+				if(site.mNodes.values().contains(nodeID_clusterID)==false && site.avaiCap>=reqNode.reqCap) {
+					boolean hasNeighbour = false;
+					for(String nei:reqNode.neiList.keySet()) {
+						if(site.mNodes.keySet().contains(nei)) {
+							hasNeighbour=true;
+						}
+					}
+					if(hasNeighbour)
+						continue;
+					site.mapClusterNode(reqNode);
+					break;
 				}
-				if(sNode.listvNodes.contains(vNode_VN)==false && sNode.cap>=vNode.cap){
-					System.out.println("Add "+vNode_VN+"("+vNode.cap+")"+" vao node "+sNode.name+"("+sNode.cap+")");
-					sNode.addVirtualNode(vNode);
-					updateNodeMappingTable(sNode.name, sNode.cap, vNode.name,vNode.cap, vNode.SE_VN);
-					vNode.mapOnSubstrateNode(sNode.name);
-					updateDemandOfNode(vNode.name, vNode.cap, key);
+			}
+		}
+	}
+	
+	/**
+	 * Neighbour Node mapping algorithms
+	 */
+	public void randomFitNodeMapping(HashMap<String, CloudSite> sites, HashMap<String, ClusterNode> clusterNodes) {
+		String nodeID_clusterID;
+
+		for(ClusterNode reqNode: clusterNodes.values()) {
+			nodeID_clusterID = reqNode.nodeID+"_"+reqNode.clusterID;
+			boolean canTurnOn;
+			for(CloudSite site:sites.values()) {
+				canTurnOn=true;
+				for(ClusterNode mNode:site.mNodes.values()) {
+					if(mNode.neiList.keySet().contains(nodeID_clusterID))
+						canTurnOn=false;
+				}
+				//If total bandwidth requirement is bigger than total site resource
+				if(!canTurnOn)
+					continue;
+				if(site.mNodes.values().contains(nodeID_clusterID)==false && site.avaiCap>=reqNode.reqCap) {
+					boolean hasNeighbour = false;
+					for(String nei:reqNode.neiList.keySet()) {
+						if(site.mNodes.keySet().contains(nei)) {
+							hasNeighbour=true;
+						}
+					}
+					if(hasNeighbour)
+						continue;
+					site.mapClusterNode(reqNode);
 					break;
 				}
 			}
 		}
 	}
 	/**
-	 * 
-	 */
-	public void mapvNodesByNodeRanking(){
-		VirtualNet vNet;
-		VirtualNode vNode;
-		SubStrateNode sNode;
-		
-		LinkedList<String>sNodeQueue=new LinkedList<>(sNodes.keySet());
-		HashMap<String,SubStrateNode>onsNodes=new HashMap<String, SubStrateNode>();
-		HashMap<String,SubStrateNode>offsNodes=new HashMap<String, SubStrateNode>();
-//		System.out.println(sNodeQueue);
-		for(String skey:sNodes.keySet())
-			offsNodes.put(skey, sNodes.get(skey));
-		
-		//Turn on the first node
-		for(String skey:sNodes.keySet()){
-			sNodes.get(skey).state=true;
-			onsNodes.put(skey, sNodes.get(skey));
-			offsNodes.remove(skey);
-			break;
-		}		
-		//Map Virtual Network Request one by one
-		for(String VNKey:vNets.keySet()){
-			vNet=vNets.get(VNKey);
-			vNodes=vNet.vNodes;
-//			sortByVNodeNei();
-			RankingvNode();
-			for(String vkey:vNodes.keySet()){
-				vNode=vNodes.get(vkey);
-//				System.out.println(vNode.neighbor);
-				boolean canTurnOn;
-				for(String skey:sNodeQueue){
-					sNode=sNodes.get(skey);
-					canTurnOn=true;
-					//Check Neighbor
-					for(VirtualNode vir:sNode.vNodes){
-						if(vir.neighbor.contains(vNode.vNode_VN))
-							canTurnOn=false;
-					}
-					//If the current sNode is not turn on
-					if(sNode.state==false){
-						boolean hasNeighborOn=false;
-						for(SubStrateNode nei:sNode.neighbors){
-							if (nei.state==true) {
-								hasNeighborOn=true;
-								break;
-							}
-						}
-						if(!hasNeighborOn)
-							canTurnOn=false;
-					}
-//					If total bandwidth requirement is bigger than total substrate resource
-//					if(sNode.usedBW+vNode.outGoingBW>sNode.outGoingBW)
-//						canTurnOn=false;
-					if (!canTurnOn) {
-						continue;
-					}
-					if(sNode.listvNodes.contains(vkey)==false && sNode.cap>=vNode.cap){
-						System.out.println("Add "+vkey+"("+vNode.cap+")"+" vao node "+sNode.name+"("+sNode.cap+")");
-						sNode.addVirtualNode(vNode);
-						updateNodeMappingTable(sNode.name, sNode.cap, vNode.name,vNode.cap, vNode.SE_VN);
-						vNode.mapOnSubstrateNode(sNode.name);
-						updateDemandOfNode(vNode.name, vNode.cap, vkey);
-						//Refresh on/off substrate node list
-						if(sNode.cap==0){
-							sNodeQueue.remove(skey);
-							onsNodes.remove(skey);
-						}else {
-							onsNodes.put(skey, sNode);
-						}
-						offsNodes.remove(skey);
-						break;
-					}
-				}
-			}
-			//Refresh list Substrate Nodes
-			onsNodes=sortBysNodeNeighbor(onsNodes);
-			offsNodes=sortBysNodeNeighbor(offsNodes);
-			sNodeQueue=new LinkedList<String>();
-			for(String skeyOn:onsNodes.keySet())
-				sNodeQueue.add(skeyOn);
-			for(String skeyOff:offsNodes.keySet())
-				sNodeQueue.add(skeyOff);
-			//Display info
-//			for(String s:sNodeQueue)
-//				System.out.println(sNodes.get(s).name+"("+sNodes.get(s).neighbors.size()+")  "+sNodes.get(s).cap);
-		}
-	}
-	/**
-	 * Map theo thuật toán Topology Aware
-	 */
-	public void mapvNodesByTopoAware(){
-		VirtualNet vNet;
-		VirtualNode vNode;
-		SubStrateNode sNode;
-
-		//Map Virtual Network Request one by one
-//		System.out.println(sNodes.keySet().size());
-		for(String VNKey:vNets.keySet()){
-			LinkedList<String>sNodeQueue=new LinkedList<>(sNodes.keySet());
-			vNet=vNets.get(VNKey);
-			vNodes=vNet.vNodes;
-//			System.out.println(vNodes.keySet().size());
-			sortByVNodeRank();
-			for(String vkey:vNodes.keySet()){
-				vNode=vNodes.get(vkey);
-				
-				boolean canTurnOn;
-				String skey=sNodeQueue.pollFirst();
-				if(skey!=null){
-					sNode=sNodes.get(skey);
-					canTurnOn=true;
-					//Check Neighbor
-					for(VirtualNode vir:sNode.vNodes){
-						if(vir.neighbor.contains(vNode.vNode_VN))
-							canTurnOn=false;
-					}
-					if (!canTurnOn)
-						continue;
-					
-					if(sNode.listvNodes.contains(vkey)==false && sNode.cap>=vNode.cap){
-						System.out.println("Add "+vkey+"("+vNode.cap+")"+" vao node "+sNode.name+"("+sNode.cap+")");
-						sNode.addVirtualNode(vNode);
-						updateNodeMappingTable(sNode.name, sNode.cap, vNode.name,vNode.cap, vNode.SE_VN);
-						vNode.mapOnSubstrateNode(sNode.name);
-						updateDemandOfNode(vNode.name, vNode.cap, vkey);
-						if(sNode.cap==0){
-							sNodes.remove(skey);
-						}
-					}
-				}
-			}
-		}
-	}
-	/**
-	 * Map Virtual Node on suitable Substrate Node 
-	 */
-	public void mapvNodeByID() {
-		VirtualNode vNode;
-		SubStrateNode sNode;
-		
-		LinkedList<String>sNodeQueue=new LinkedList<>(sNodes.keySet());
-		LinkedList<String>listOn=new LinkedList<String>();
-		LinkedList<String>listOff=new LinkedList<String>();
-		
-		for(String skey:sNodes.keySet()){
-			listOff.addLast(skey);
-		}
-		//Turn on the first substrate node
-		for(String skey:sNodes.keySet()){
-			sNodes.get(skey).state=true;
-			listOn.addLast(skey);
-			listOff.remove(skey);
-			break;
-		}		
-		//Map Virtual Network Request one by one
-			for(String vkey:vNodes.keySet()){
-				vNode=vNodes.get(vkey);
-//				System.out.println(vNode.neighbor);
-				boolean canTurnOn;
-				//Duyt Substrate Node
-				for(String skey:sNodeQueue){
-					sNode=sNodes.get(skey);
-					canTurnOn=true;
-					//Check Neighbor
-					for(VirtualNode vir:sNode.vNodes){
-						if(vir.neighbor.contains(vNode.vNode_VN))
-							canTurnOn=false;
-					}
-					if (!canTurnOn) {
-						continue;
-					}
-					if(sNode.listvNodes.contains(vkey)==false && sNode.cap>=vNode.cap){
-//						System.out.println("Add "+vkey+"("+vNode.cap+")"+" vao node "+sNode.name+"("+sNode.cap+")");
-						sNode.addVirtualNode(vNode);
-						updateNodeMappingTable(sNode.name, sNode.cap, vNode.name,vNode.cap, vNode.SE_VN);
-						vNode.mapOnSubstrateNode(sNode.name);
-						updateDemandOfNode(vNode.name, vNode.cap, vkey);
-						//Refresh on/off substrate node list
-						if(sNode.cap==0){
-							listOff.remove(skey);
-							listOn.remove(skey);
-						}else {
-							if(!listOn.contains(skey)){
-								listOn.addLast(skey);
-								listOff.remove(skey);
-							}
-//							System.out.println("Node: "+skey+" nei "+sNode.listNeighbors);
-							for(String nei:sNode.listNeighbors){
-								if(!listOn.contains(nei)){
-									listOn.addLast(nei);
-									listOff.remove(nei);
-								}
-							}
-						}
-						sNodeQueue=new LinkedList<String>();
-						for(String skeyOn:listOn)
-							sNodeQueue.addLast(skeyOn);
-						for(String skeyOff:listOff)
-							sNodeQueue.addLast(skeyOff);
-//						System.out.println(sNodeQueue);
-						break;
-					}
-				}
-			}
-			//Display info
-//			for(String s:sNodeQueue)
-//				System.out.println(sNodes.get(s).name+"("+sNodes.get(s).neighbors.size()+")  "+sNodes.get(s).cap);
-		}
-	/**
-	 * Lấy các VNR và các nút ảo trong VNR đó
-	 */
-	public void getvNets(){
-		conn = db.connect();
-		vNets=new HashMap<String, VirtualNet>();
-		String VNName;
-		try {
-			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt
-					.executeQuery("SELECT SLICENAME FROM DEMANDNEW");
-			while (rs.next()) {
-				VNName=rs.getString(1);
-				if (!vNets.containsKey(VNName)) {
-					VirtualNet vNet=new VirtualNet(VNName);
-					vNets.put(VNName, vNet);
-				}
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		db.disconnect();
-//		System.out.println(vNodes.keySet());
-		for(String vkey:vNodes.keySet()){
-			
-			VirtualNode vNode=vNodes.get(vkey);
-			vNets.get(vNode.VN).addvNode(vNode);
-//			VirtualNet vNet=vNets.get(vNode.VN);
-//			vNet.addvNode(vNode);
-		}
-	}
-
-	
-	/**
-	 * Sort substrate node by nNeighbors descending
-	 * 
+	 * Sắp xếp theo số hàng xóm giảm dần,Utilization tăng giảm dần
 	 * @param map
 	 */
-	public HashMap<String, CloudSite> sortSiteByNeighbor(HashMap<String, CloudSite> sites) {
+	public HashMap<String, CloudSite> sort_Site_NeiDec_CapUInc(HashMap<String, CloudSite> sites) {
 		List<Map.Entry<String, CloudSite>> list = new LinkedList<>(
 				sites.entrySet());
 		Collections.sort(list,new Comparator<Map.Entry<String, CloudSite>>() {
@@ -401,208 +234,70 @@ public class NodeMappingNeighbor extends NodeMapping{
 					public int compare(Map.Entry<String, CloudSite> o1,Map.Entry<String, CloudSite> o2) {
 						int result=Double.compare(o2.getValue().nNeighbour(),o1.getValue().nNeighbour());
 						if(result==0)
-							result=Double.compare(o2.getValue().capacity,o1.getValue().capacity);
+							result=Double.compare(o1.getValue().utilization,o2.getValue().utilization);
 						return result;
 					}
 				});
 		HashMap<String, CloudSite>sortedSites = new LinkedHashMap<>();
+//		System.out.print("\nSorted cloud sites:   ");
 		for (Map.Entry<String, CloudSite> entry : list) {
 			sortedSites.put(entry.getKey(), entry.getValue());
+//			System.out.print(entry.getKey()+"("+entry.getValue().nNeighbour()+","+entry.getValue().utilization+")"+" ");
 		}
 		return sortedSites;
 	}
+	
 	/**
-	 * Ranking according to nNeighbors, cap, outgoingLinkBW
-	 * 
+	 * Sắp xếp theo số hàng xóm giảm dần, Avai Cap giảm dần
 	 * @param map
 	 */
-	public void RankingsNode() {
-		List<Map.Entry<String, SubStrateNode>> list = new LinkedList<>(
-				sNodes.entrySet());
-		Collections.sort(list,new Comparator<Map.Entry<String, SubStrateNode>>() {
+	public HashMap<String, CloudSite> sort_Site_NeiDec_AvaiDec(HashMap<String, CloudSite> sites) {
+		List<Map.Entry<String, CloudSite>> list = new LinkedList<>(
+				sites.entrySet());
+		Collections.sort(list,new Comparator<Map.Entry<String, CloudSite>>() {
 					@Override
-					public int compare(Map.Entry<String, SubStrateNode> o1,Map.Entry<String, SubStrateNode> o2) {
-						int result=Double.compare(o2.getValue().nNeighbors(),o1.getValue().nNeighbors());
-						if(result==0){
-							result=Double.compare(o2.getValue().cap,o1.getValue().cap);
-							if(result==0){
-								result=Double.compare(o2.getValue().outGoingBW,o1.getValue().outGoingBW);
-							}
-							return result;
-						}
+					public int compare(Map.Entry<String, CloudSite> o1,Map.Entry<String, CloudSite> o2) {
+						int result=Double.compare(o2.getValue().nNeighbour(),o1.getValue().nNeighbour());
+						if(result==0)
+							result=Double.compare(o2.getValue().avaiCap,o1.getValue().avaiCap);
 						return result;
 					}
 				});
-		HashMap<String, SubStrateNode>listsNodes = new LinkedHashMap<>();
-//		System.out.println("vNodes");
-		for (Map.Entry<String, SubStrateNode> entry : list) {
-			listsNodes.put(entry.getKey(), entry.getValue());
-			System.out.println(entry.getValue().name+"  "+entry.getValue().nNeighbors()+"  "+entry.getValue().cap+"  "+entry.getValue().outGoingBW);
+		HashMap<String, CloudSite>sortedSites = new LinkedHashMap<>();
+//		System.out.print("\nSorted cloud sites:   ");
+		for (Map.Entry<String, CloudSite> entry : list) {
+			sortedSites.put(entry.getKey(), entry.getValue());
+//			System.out.print(entry.getKey()+"("+entry.getValue().nNeighbour()+","+entry.getValue().utilization+")"+" ");
 		}
-		sNodes=listsNodes;
+		return sortedSites;
 	}
 	
+	       
 	/**
-	 * Ranking according to nNeighbors, cap, outgoingLinkBW
+	 * Sort required Cluster Node by nNeighbors descending
 	 * 
 	 * @param map
 	 */
-	public void RankingvNode() {
-		List<Map.Entry<String, VirtualNode>> list = new LinkedList<>(
-				vNodes.entrySet());
+	public HashMap<String, ClusterNode> sort_ClusterNode_NeiDec_RankDec(HashMap<String, ClusterNode> reqNodes) {
+		List<Map.Entry<String, ClusterNode>> list = new LinkedList<>(
+				reqNodes.entrySet());
 		Collections.sort(list,
-				new Comparator<Map.Entry<String, VirtualNode>>() {
+				new Comparator<Map.Entry<String, ClusterNode>>() {
 					@Override
-					public int compare(Map.Entry<String, VirtualNode> o1,Map.Entry<String, VirtualNode> o2) {
-						int result=Double.compare(o2.getValue().neighbor.size(),o1.getValue().neighbor.size());
-						if(result==0){
-							result=Double.compare(o2.getValue().cap,o1.getValue().cap);
-							if(result==0){
-								result=Double.compare(o2.getValue().outGoingBW,o1.getValue().outGoingBW);
-							}
-							return result;
-						}
+					public int compare(Map.Entry<String, ClusterNode> o1,Map.Entry<String, ClusterNode> o2) {
+						int result=Double.compare(o2.getValue().getNNeighbour(),o1.getValue().getNNeighbour());
+						if(result==0)
+							result=Double.compare(o2.getValue().rank,o1.getValue().rank);
 						return result;
 					}
 				});
 
-		HashMap<String, VirtualNode>listvNodes = new LinkedHashMap<>();
-//		System.out.println("vNodes");
-		for (Map.Entry<String, VirtualNode> entry : list) {
-			listvNodes.put(entry.getKey(), entry.getValue());
-			System.out.println(entry.getValue().name+"  "+entry.getValue().neighbor+"  "+entry.getValue().cap+"  "+entry.getValue().outGoingBW);
+		HashMap<String, ClusterNode>sortedNodes = new LinkedHashMap<>();
+//		System.out.print("\n\nSorted cluster nodes: ");
+		for (Map.Entry<String, ClusterNode> entry : list) {
+			sortedNodes.put(entry.getKey(), entry.getValue());
+//			System.out.print(entry.getKey()+"("+String.valueOf(entry.getValue().getNNeighbour())+")"+" ");
 		}
-		vNodes=listvNodes;
-	}
-	/**
-	 * Sort substrate node by Rank descending
-	 * 
-	 * @param map
-	 */
-	public void sortBysNodeRank() {
-		List<Map.Entry<String, SubStrateNode>> list = new LinkedList<>(
-				sNodes.entrySet());
-		Collections.sort(list,new Comparator<Map.Entry<String, SubStrateNode>>() {
-					@Override
-					public int compare(Map.Entry<String, SubStrateNode> o1,Map.Entry<String, SubStrateNode> o2) {
-						int result=Double.compare(o2.getValue().rank,o1.getValue().rank);
-						if(result==0)
-							result=Double.compare(o2.getValue().cap,o1.getValue().cap);
-						return result;
-					}
-				});
-		HashMap<String, SubStrateNode>listsNodes = new LinkedHashMap<>();
-//		System.out.println("vNodes");
-		for (Map.Entry<String, SubStrateNode> entry : list) {
-			listsNodes.put(entry.getKey(), entry.getValue());
-//			System.out.println(entry.getValue().name+"  "+entry.getValue().rank+"  "+entry.getValue().cap);
-		}
-		sNodes=listsNodes;
-	}
-	
-	/**
-	 * Sort substrate node by nNeighbors descending
-	 * có tham số
-	 * 
-	 * @param map
-	 */
-	public HashMap<String, SubStrateNode> sortBysNodeNeighbor(HashMap<String, SubStrateNode>sMap) {
-		List<Map.Entry<String, SubStrateNode>> list = new LinkedList<>(
-				sMap.entrySet());
-		Collections.sort(list,new Comparator<Map.Entry<String, SubStrateNode>>() {
-					@Override
-					public int compare(Map.Entry<String, SubStrateNode> o1,Map.Entry<String, SubStrateNode> o2) {
-						int result=Double.compare(o2.getValue().nNeighbors(),o1.getValue().nNeighbors());
-						if(result==0)
-							result=Double.compare(o2.getValue().cap,o1.getValue().cap);
-						return result;
-					}
-				});
-		HashMap<String, SubStrateNode>listsNodes = new LinkedHashMap<>();
-//		System.out.println("vNodes");
-		for (Map.Entry<String, SubStrateNode> entry : list) {
-			listsNodes.put(entry.getKey(), entry.getValue());
-		}
-		return listsNodes;
-	}
-	
-	/**
-	 * Sort vNode request by nNeighbors descending
-	 * 
-	 * @param map
-	 */
-	public void sortByVNodeNei() {
-		List<Map.Entry<String, VirtualNode>> list = new LinkedList<>(
-				vNodes.entrySet());
-		Collections.sort(list,
-				new Comparator<Map.Entry<String, VirtualNode>>() {
-					@Override
-					public int compare(Map.Entry<String, VirtualNode> o1,Map.Entry<String, VirtualNode> o2) {
-						int result=Double.compare(o2.getValue().neighbor.size(),o1.getValue().neighbor.size());
-						if(result==0)
-							result=Double.compare(o2.getValue().cap,o1.getValue().cap);
-						return result;
-					}
-				});
-
-		HashMap<String, VirtualNode>listvNodes = new LinkedHashMap<>();
-//		System.out.println("vNodes");
-		for (Map.Entry<String, VirtualNode> entry : list) {
-			listvNodes.put(entry.getKey(), entry.getValue());
-//			System.out.println(entry.getValue().name+"  "+entry.getValue().neighbor+"  "+entry.getValue().cap);
-		}
-		vNodes=listvNodes;
-	}
-	/**
-	 * Sort vNetwork by nNeighbors descending
-	 * @param map
-	 */
-	public void sortvNetByNeighbors() {
-		List<Map.Entry<String, VirtualNet>> list = new LinkedList<>(
-				vNets.entrySet());
-		Collections.sort(list,
-				new Comparator<Map.Entry<String, VirtualNet>>() {
-					@Override
-					public int compare(Map.Entry<String, VirtualNet> o1,Map.Entry<String, VirtualNet> o2) {
-						int result=Double.compare(o2.getValue().neighbors,o1.getValue().neighbors);
-						if(result==0)
-							result=Double.compare(o2.getValue().cap,o1.getValue().cap);
-						return result;
-					}
-				});
-
-		HashMap<String, VirtualNet>listvNets = new LinkedHashMap<>();
-		for (Map.Entry<String, VirtualNet> entry : list) {
-			listvNets.put(entry.getKey(), entry.getValue());
-		}
-		vNets=listvNets;
-	}
-	
-	/**
-	 * Sort vNode request by Rank descending
-	 * 
-	 * @param map
-	 */
-	public void sortByVNodeRank() {
-		List<Map.Entry<String, VirtualNode>> list = new LinkedList<>(
-				vNodes.entrySet());
-		Collections.sort(list,
-				new Comparator<Map.Entry<String, VirtualNode>>() {
-					@Override
-					public int compare(Map.Entry<String, VirtualNode> o1,Map.Entry<String, VirtualNode> o2) {
-						int result=Double.compare(o2.getValue().rank,o1.getValue().rank);
-						if(result==0)
-							result=Double.compare(o2.getValue().cap,o1.getValue().cap);
-						return result;
-					}
-				});
-
-		HashMap<String, VirtualNode>listvNodes = new LinkedHashMap<>();
-//		System.out.println("vNodes");
-		for (Map.Entry<String, VirtualNode> entry : list) {
-			listvNodes.put(entry.getKey(), entry.getValue());
-//			System.out.println(entry.getValue().name+"  "+entry.getValue().rank+"  "+entry.getValue().cap);
-		}
-		vNodes=listvNodes;
+		return sortedNodes;
 	}
 }

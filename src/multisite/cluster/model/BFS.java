@@ -11,8 +11,6 @@ public class BFS {
 
 	private String start;
 	private String end;
-	// private Map<String, LinkedHashSet<String>> maplink = new HashMap<String,
-	// LinkedHashSet<String>>();
 	private LinkedList<String> mypath;
 
 	public BFS() {
@@ -32,9 +30,9 @@ public class BFS {
 		LinkedList<String> nodes = topo.adjacentNodes(visited.getLast());
 		for (String node : nodes) {
 
-			if (visited.contains(node)) {
+			if (visited.contains(node))
 				continue;
-			}
+			
 			if (node.equals(end)) {
 				visited.add(node);
 				printPath(visited);
