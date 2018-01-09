@@ -11,7 +11,6 @@ import multisite.cluster.model.ResourceGenerator;
 public class Mapping {
 	Connection conn;
 	Database database = new Database();
-	ResourceGenerator data_loader = new ResourceGenerator();
 	JSONObject graph; //Multi-site topo
 	JSONObject clusterDemand;
 	
@@ -28,29 +27,27 @@ public class Mapping {
 	}
 
 	/**
-	 * Main
+	 * Main for Mapping Measurement 
 	 * 
 	 * @param args
 	 */
 	public void map(int nNodes, int maxDemand, int minDemand, double alpha, double beta, int nTime) {
-		for (minDemand = minDemand; minDemand <= maxDemand; minDemand = minDemand + 10) {
+		ResourceGenerator generator;
+		for (int ratio = minDemand; ratio <= maxDemand; ratio = ratio + 10) {
+			generator = new ResourceGenerator(nNodes, alpha, beta, maxDemand, ratio);
+			
+			//Reset all previous results
 			ave_HLB_eval.reset();
 			ave_NeiHEE_eval.reset();
 			ave_RF_eval.reset();
 			
-			data_loader.nNode = nNodes;
-			data_loader.alpha = alpha;
-			data_loader.beta = beta;
-			data_loader.maxDemand = maxDemand;
-			data_loader.minDemand = minDemand;
-			System.out.println("Traffic Demand Ratio: " + data_loader.minDemand);
-			
+			System.out.println("Traffic Demand Ratio: " + ratio);
 			for (int i = 0; i < nTime; i++) {
 				//Run nTime mapping demand on topology
 				System.out.print("" + i);
 				Mapping mapping = new Mapping();
-				graph=data_loader.createMultiSiteTopo();
-				clusterDemand=data_loader.createClusterDemand(graph); //Sinh demand theo demand ratio
+				graph=generator.createMultiSiteTopo();
+				clusterDemand=generator.createClusterDemand(graph); //Sinh demand theo demand ratio
 				System.out.print("-");
 
 				ave_HLB_eval.putInSum(mapping.runHLB_MVP(graph, clusterDemand));
@@ -64,7 +61,7 @@ public class Mapping {
 //			ave_RF_eval.getAverageResult(nTime);
 //			ave_RF_eval.printOut();
 		}
-		System.out.println("Done ");
+		System.out.println("Done!");
 	}
 
 	/**
@@ -102,5 +99,4 @@ public class Mapping {
 		eva = MVP_obj.Mapping_RandomFit_P(graph, clusterDemand);
 		return eva;
 	}
-	
 }

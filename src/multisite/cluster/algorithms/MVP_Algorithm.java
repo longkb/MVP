@@ -42,7 +42,7 @@ public class MVP_Algorithm {
 	public Map<String, Double> linkBandwidth;
 	public String SE;
 	public double demand, srcreq, dstreq;
-	public NodeMappingNeighbor nodemapping;
+	public NodeMapping nodemapping;
 	public Map<String, String> saveName;
 	public boolean check;
 	public Map<String, Integer> listdemand;
@@ -53,7 +53,7 @@ public class MVP_Algorithm {
 	public Evaluation eva;
 	
 	public MVP_Algorithm() {
-		nodemapping = new NodeMappingNeighbor();
+		nodemapping = new NodeMapping();
 		topoSite = new TopoSite();
 		eva= new Evaluation();
 	}
@@ -82,7 +82,8 @@ public class MVP_Algorithm {
 		}
 		double nvLinks=reqLinks.size();
 		//Link Mapping
-		mappingResult = BFSLinkMapping(topoSite, topo, reqLinks, mappingResult);
+		LinkMapping LM = new LinkMapping();
+		mappingResult = LM.BFSLinkMapping(topoSite, topo, reqLinks, mappingResult);
 		
 //		System.out.println("\nCloud Links:");
 //		for(Link l:topoSite.links.values()) {
@@ -115,7 +116,8 @@ public class MVP_Algorithm {
 		}
 		double nvLinks=reqLinks.size();
 		//Link Mapping
-		mappingResult = BFSLinkMapping(topoSite, topo, reqLinks, mappingResult);
+		LinkMapping LM = new LinkMapping();
+		mappingResult = LM.BFSLinkMapping(topoSite, topo, reqLinks, mappingResult);
 		eva=performanceEvaluation(topoSite, nvLinks, mappingResult);
 		return eva;
 	}
@@ -136,55 +138,13 @@ public class MVP_Algorithm {
 		}
 		double nvLinks=reqLinks.size();
 		//Link Mapping
-		mappingResult = BFSLinkMapping(topoSite, topo, reqLinks, mappingResult);
+		LinkMapping LM = new LinkMapping();
+		mappingResult = LM.BFSLinkMapping(topoSite, topo, reqLinks, mappingResult);
 		eva=performanceEvaluation(topoSite, nvLinks, mappingResult);
 		return eva;
 	}
 	
-	public MappingResult BFSLinkMapping(TopoSite topoSite, Topology topo, LinkedList<vLink> reqLinks, MappingResult mappingResult) {
-
-		//Link Mapping		
-		while(reqLinks.size()!=0) {
-			vLink vlink=reqLinks.pop();
-			if(vlink.src.reqCap !=0 || vlink.dst.reqCap!=0) {
-				continue;
-			}
-			ClusterNode srcNode, dstNode;
-			CloudSite srcSite, dstSite;
-			srcNode=vlink.src;
-			srcSite= srcNode.locatedSite;
-			dstNode=vlink.dst;
-			dstSite=dstNode.locatedSite;
-			
-			HashMap<String, sPath> sPaths;
-			sPaths = getsPaths(srcSite.ID,dstSite.ID, topo, topoSite);
-			if(sPaths.size()==0) {
-				mappingResult.failedvLinks.put(vlink.ID,vlink );
-				//Recover Site capacity
-				srcSite.unmapClusterNode(srcNode);
-				dstSite.unmapClusterNode(dstNode);
-				continue;
-			}
-			boolean isMapped=false;
-			for(sPath p:sPaths.values()) {
-				double minBWSD= p.minBWSD;
-				if(minBWSD>0 && minBWSD>vlink.BW) {
-					//Map vLink on substrate path p
-					mappingResult.mapvLink(vlink, p, topoSite);
-					isMapped=true;
-					break;
-				}
-			}
-			//There is no path can map required vLink
-			if(isMapped==false) {
-				mappingResult.failedvLinks.put(vlink.ID,vlink );
-				//Recover Site capacity
-				srcSite.unmapClusterNode(srcNode);
-				dstSite.unmapClusterNode(dstNode);
-			}
-		}
-		return mappingResult;
-	}
+	
 	public LinkedList<String> getBestPaths(String startNode, String endNode, Topology topo) {
 		BFS bfs = new BFS();
 		bfs.setSTART(startNode);
@@ -195,76 +155,9 @@ public class MVP_Algorithm {
 		return shortpath;
 	}
 
-	public LinkedList<String> getStringPaths(String startNode, String endNode, Topology topo) {
-		BFS bfs = new BFS();
-		bfs.setSTART(startNode);
-		bfs.setEND(endNode);
-		bfs.run(topo);
-		LinkedList<String> path = bfs.getMypath();
-		LinkedList<String> listPaths = new LinkedList<String>();
-		String temp = "";
-		for (int i = 0; i < path.size(); i++) {
-			if (path.get(i).equals("_")) {
-				listPaths.add(temp);
-				temp = "";
-			} else {
-				if (temp.equals(""))
-					temp = path.get(i);
-				else
-					temp = temp + " " + path.get(i);
-			}
-		}
-		return listPaths;
-	}
-
-	public HashMap<String, sPath> getsPaths(String srcSite, String dstSite, Topology topo, TopoSite topoSite) {
-		HashMap<String, sPath> sPaths = new HashMap<String, sPath>();
-		LinkedList<String> listPaths = getStringPaths(srcSite, dstSite, topo);
-		for (String p : listPaths) {
-			if (p.length() != 0) {
-				CloudSite sSite = topoSite.sites.get(srcSite);
-				CloudSite dSite = topoSite.sites.get(dstSite);
-				sPath spath= new sPath(sSite, dSite);
-				String[] siteNames=p.split(" ");
-				Link link12;
-				for(int i=0; i<siteNames.length-1;i++) {
-					link12=topoSite.links.get(siteNames[i]+" "+siteNames[i+1]);
-					spath.addNewLink(link12);
-				}
-				spath.strPath=p;
-				sPaths.put(p, spath);
-			}
-		}
-		return sortPathByLength(sPaths);
-	}
-	/**
-	 * Sort substrate path by Path length increasing
-	 * 
-	 * @param map
-	 */
-	public HashMap<String, sPath> sortPathByLength(HashMap<String, sPath> sPaths) {
-		List<Map.Entry<String, sPath>> list = new LinkedList<>(
-				sPaths.entrySet());
-		Collections.sort(list,
-				new Comparator<Map.Entry<String, sPath>>() {
-					@Override
-					public int compare(Map.Entry<String, sPath> o1,Map.Entry<String, sPath> o2) {
-						int result=Double.compare(o1.getValue().strPath.length(),o2.getValue().strPath.length());
-						if(result==0)
-							result=Double.compare(o2.getValue().minBWSD,o1.getValue().minBWSD);
-						return result;
-					}
-				});
-
-		HashMap<String, sPath>sortedsPaths = new LinkedHashMap<>();
-//		System.out.print("\n\nSorted sPath nodes: \n");
-		for (Map.Entry<String, sPath> entry : list) {
-			sortedsPaths.put(entry.getKey(), entry.getValue());
-//			System.out.print(entry.getKey()+"("+String.valueOf(entry.getValue().minBWSD)+")"+" ");
-//			System.out.println(entry.getKey());
-		}
-		return sortedsPaths;
-	}
+	
+	
+	
 	
 	public Evaluation performanceEvaluation(TopoSite topoSite, double nvLinks, MappingResult mapResult) {
 		//Get Maximum Node Utilization

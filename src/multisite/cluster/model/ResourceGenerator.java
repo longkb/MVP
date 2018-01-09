@@ -28,47 +28,62 @@ public class ResourceGenerator {
 	public Double alpha;
 	public Double beta;
 	public String dir = "";
-	public static final int BANDWIDTH = 1000;
 
 	private double load,tempLoad;
 	private double totalCap,totalBW;
-	private double clusterNodeReq,clientBWReq;
-	
-	private int upTh=800, dwTh=300; //Threshold for Bandwidth randomize
-	private int upCap=9,dwCap=3; //Threshold for site capacity randomize
+	private double nodeCapReq,vLinkBWReq;
+
+	private int upBWTh, dwBWTh; //Threshold for Bandwidth randomize
+	private int upCapTh,dwCapTh; //Threshold for site capacity randomize
 	private Random rand;
 	public Topology topo;
 	public LinkedList<String>listSite;
 	public static double N=1, M=1;
 	
 	
-	public ResourceGenerator() {
+	public ResourceGenerator(int nNodes, double alpha, double beta, int maxDemand, int minDemand) {
 		topo=new Topology();
 		listSite=new LinkedList<String>();
+		rand = new Random();
+		this.nNode = nNodes;
+		this.alpha = alpha;
+		this.beta = beta;
+		this.maxDemand = maxDemand;
+		this.minDemand = minDemand;
 	}
-
-	@SuppressWarnings("rawtypes")
+	
+	public ResourceGenerator() {
+		// TODO Auto-generated constructor stub
+	}
+	public void setMinDemand(int minDemand) {
+		this.minDemand = minDemand;
+	}
+	
 	public JSONObject createMultiSiteTopo() {
-		totalCap=0;
-		WaxmanGenerator waxman = new WaxmanGenerator(0.0,100.0, 0.0, 100.0);
-
-		JSONObject graph;
-		graph = waxman.Waxman(nNode, BANDWIDTH, alpha, beta);
+		upBWTh=800; //Upper threshold for BW randomize
+		dwBWTh=300; //Lower threshold for BW generator
+		upCapTh=20; //Lower Threshold for site capacity randomize
+		dwCapTh=10; //Lower Threshold for site capacity randomize
 		
-		String ID, S, D;
+		WaxmanGenerator waxman = new WaxmanGenerator(0.0, 100.0, 0.0, 100.0);
+		JSONObject graph;
+		graph = waxman.Waxman(nNode, alpha, beta);
+
+		totalCap=0;
+		totalBW=0;
+		String siteID, S, D;
 		Map<String, Double>sites=new HashMap<String, Double>();
-		Random rand=new Random();
-		double capacity;
+		double capacity, linkBW;
 
 		JSONObject siteArr = (JSONObject) graph.get("Site");
 		Iterator<JSONObject> siteIterator=siteArr.values().iterator();
 		JSONObject entry;
 		while (siteIterator.hasNext()) {
 			entry= siteIterator.next();
-			ID=(String)entry.get("ID");
-			capacity=rand.nextInt(upCap-dwCap)*2*10+dwCap*2*10;
+			siteID=(String)entry.get("ID");
+			capacity=rand.nextInt(upCapTh - dwCapTh)*10 + dwCapTh*10;
 			entry.put("Capacity", capacity);
-			sites.put(ID,capacity);
+			sites.put(siteID,capacity);
 			totalCap+=capacity;
 		}
 
@@ -76,8 +91,11 @@ public class ResourceGenerator {
 		Iterator<JSONObject> linkIterator=linkArr.values().iterator();
 		while (linkIterator.hasNext()) {
 			entry = linkIterator.next();
+			
 			S=(String)entry.get("src");
 			D=(String)entry.get("dst");
+			linkBW=(Double)entry.get("Bandwidth");
+			totalBW+=linkBW/2;
 			
 			//Add neighbour cho node S
 			JSONObject srcNode=(JSONObject) siteArr.get(S);
@@ -100,57 +118,48 @@ public class ResourceGenerator {
 	public int i=0;
 	@SuppressWarnings("unchecked")
 	public JSONObject createClusterDemand(JSONObject graph){
-		JSONObject clusterRequestList=new JSONObject();
+		JSONObject CRs=new JSONObject(); //The list of incomming Cluster Requests
 		
-		//Number of links in graph
-		int nLinks=((JSONObject)graph.get("Link")).size();
-		int nSites=((JSONObject)graph.get("Site")).size();
-				
-		load=(double)maxDemand/100;
-		//Mỗi link giữa 2 site có băng thông là BANDWIDTH
-		totalBW=nLinks/2*BANDWIDTH; 
-
+		load=(double)minDemand/100;
+		nodeCapReq=0;
+		vLinkBWReq=0;
+		tempLoad=0;
+		int nCR=0; //Number of cluster request
 		double BWRatio, capRatio;
 		
-		rand= new Random();
-		
-		clusterNodeReq=0;
-		clientBWReq=0;
-		tempLoad=0;
-		int nCluster=0;
 		while (true) {
-			nCluster+=1;
-			String clusterName="R"+String.valueOf(nCluster);
+			nCR+=1;
+			String crName="R"+String.valueOf(nCR);
 			//Tạo JSON để lưu cluster request từ client
 			JSONObject clusterJSON=new JSONObject();
-			clusterJSON.put("Name", clusterName);
+			clusterJSON.put("Name", crName);
 			
 			//Tạo JSON để lưu cấu hình của cluster
-			JSONObject configurationJSON=new JSONObject();
-			clusterJSON.put("Configuration", configurationJSON);
+			JSONObject configJSON=new JSONObject();
+			clusterJSON.put("Configuration", configJSON);
 			
 			//Thêm clusterJSON vào list
-			clusterRequestList.put(clusterName, clusterJSON);
+			CRs.put(crName, clusterJSON);
 
-			if (genClusterDemand(clusterName, configurationJSON)) {
+			if (genClusterDemand(crName, configJSON)) {
 				break;
 			}
 			//Trường hợp số Active bằng 0. Xóa JSONObject của cluster vừa thêm vào
-			if(configurationJSON.get("Active")==null) {
-				clusterRequestList.remove(clusterName);
+			if(configJSON.get("Active")==null) {
+				CRs.remove(crName);
 			}
 		}
-		BWRatio=clientBWReq/totalBW;
-		capRatio=clusterNodeReq/totalCap;
-//		System.out.println("\nBandwidth: "+clientBWReq);
-//		System.out.println("Total BW: "+totalBW);
-//		System.out.println("Capacity: "+clusterNodeReq);
-//		System.out.println("Total Cap: "+totalCap);
-//		System.out.println("BW ratio: "+ BWRatio);
-//		System.out.println("Cap ratio: "+ capRatio);
+		BWRatio=vLinkBWReq/totalBW;
+		capRatio=nodeCapReq/totalCap;
+		System.out.println("\nBandwidth: "+vLinkBWReq);
+		System.out.println("Total BW: "+totalBW);
+		System.out.println("Capacity: "+nodeCapReq);
+		System.out.println("Total Cap: "+totalCap);
+		System.out.println("BW ratio: "+ BWRatio);
+		System.out.println("Cap ratio: "+ capRatio);
 		
-		writeToFile(clusterRequestList, dir+"clusterDemand.txt");
-		return clusterRequestList;
+		writeToFile(CRs, dir+"clusterDemand.txt");
+		return CRs;
 	}
 	public double getLoad(double clusterNodeReq,double clientBWReq){
 		return (N*clusterNodeReq/totalCap + M*clientBWReq/totalBW)/(N + M);
@@ -168,13 +177,12 @@ public class ResourceGenerator {
 		int nActive;
 		int nStandby;
 		double srcReq, dstReq, newLoad;
-		int nSite=listSite.size();
 
 		//Random số active, standby node trong cluster
 		nActive=rand.nextInt(upTh_nNodes)+1;
 		nStandby=1;
 
-		tempLoad=getLoad(clusterNodeReq, clientBWReq); //load trước khi sinh demand
+		tempLoad=getLoad(nodeCapReq, vLinkBWReq); //load trước khi sinh demand
 		//Nếu độ chênh lệch của load hiện tại và load đặt ra quá nhỏ, bỏ qua, ko cần tạo thêm demand nữa
 		if(load-tempLoad<10/totalBW/2){ 
 			return true;
@@ -182,13 +190,13 @@ public class ResourceGenerator {
 		
 //		double reqBW = getRandomBandwidth(upTh,dwTh); //Băng thông request từ client đến active node
 
-		double syncBW = getRandomBandwidth(upTh,dwTh); //băng thông dùng cho state transfer từ active đến standby
-		clientBWReq+=syncBW*nActive;
+		double syncBW = getRandomBandwidth(upBWTh,dwBWTh); //băng thông dùng cho state transfer từ active đến standby
+		vLinkBWReq+=syncBW*nActive;
 		
 		double nodeCap=getRandomNodeCapacity(upNodeCapTh, dwNodeCapTh); //Sinh random capacity request cho các node trong cluster
-		clusterNodeReq+=(1+nStandby)*nActive*nodeCap; 
+		nodeCapReq+=(1+nStandby)*nActive*nodeCap; 
 		
-		newLoad=getLoad(clusterNodeReq,clientBWReq);  //Load sau khi sinh demand
+		newLoad=getLoad(nodeCapReq,vLinkBWReq);  //Load sau khi sinh demand
 		//Nếu load mới bằng load đặt ra, thêm demand thành công
 		if(newLoad==load){ 
 			addNewDemand(configurationJSON, nActive, nStandby, nodeCap, 0, syncBW);
@@ -196,11 +204,11 @@ public class ResourceGenerator {
 		}
 		//Nếu load mới lớn hơn load đặt ra, loại bỏ demand vừa rồi. Update lại load cũ bằng cách thêm 1 lượng BW vào các req BW
 		if (newLoad > load) {
-			clientBWReq=clientBWReq-syncBW*nActive;
-			clusterNodeReq=clusterNodeReq-(1+nStandby)*nActive*nodeCap;
+			vLinkBWReq=vLinkBWReq-syncBW*nActive;
+			nodeCapReq=nodeCapReq-(1+nStandby)*nActive*nodeCap;
 			
 			double BW=0;
-			while(BW<=0 || BW>upTh){
+			while(BW<=0 || BW>upBWTh){
 				if (i>100) {
 					return true;
 				}
@@ -221,18 +229,18 @@ public class ResourceGenerator {
 				syncBW=BW;
 				syncBW=(double)((int)(syncBW/10)*10); //Làm tròn
 
-				clientBWReq+=syncBW*nActive;
-				clusterNodeReq+=(1+nStandby)*nActive*nodeCap; 
+				vLinkBWReq+=syncBW*nActive;
+				nodeCapReq+=(1+nStandby)*nActive*nodeCap; 
 				
-				if (syncBW>0 && syncBW<=upTh) {
+				if (syncBW>0 && syncBW<=upBWTh) {
 					addNewDemand(configurationJSON, nActive, nStandby, nodeCap, 0, syncBW);
 					return true;
 				}else if (BW==0) {
 					break;
 				}else {
 					i++;
-					clientBWReq=clientBWReq-syncBW*nActive;
-					clusterNodeReq=clusterNodeReq-(1+nStandby)*nActive*nodeCap;
+					vLinkBWReq=vLinkBWReq-syncBW*nActive;
+					nodeCapReq=nodeCapReq-(1+nStandby)*nActive*nodeCap;
 				}
 			}
 			return true;

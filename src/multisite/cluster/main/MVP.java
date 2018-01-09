@@ -7,12 +7,12 @@ public class MVP {
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
-		int nNodes=10;
-		int maxDemand=90;
-		int minDemand=20;
+		int nNodes=8;
+		int maxDemand=50;
+		int minDemand=50;
 		double alpha=0.5;
 		double beta=0.5;
-		int nTime=10;
+		int nTime=1;
 		Mapping MVP= new Mapping();
 		MVP.map(nNodes,maxDemand,minDemand,alpha,beta,nTime);
 	}

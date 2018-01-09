@@ -11,14 +11,17 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 /**
- * @author huynhhust
+ * @author LongKB
  *
  */
 public class WaxmanGenerator {
-	private double xmax=100.0;
+	private double xmax=1000.0;
 	private double xmin=0;
-	private double ymax=100.0;
+	private double ymax=1000.0;
 	private double ymin=0.0;
+	private int upBW=2000, dwBW=1000;
+	private double randBW;
+	private Random rand;
 	
 	public WaxmanGenerator(double xmin, double xmax, double ymin, double ymax) {
 		//Khởi tạo tọa độ max và min của các cloud sites
@@ -26,10 +29,12 @@ public class WaxmanGenerator {
 		this.xmin=xmin;
 		this.ymax=ymax;
 		this.ymin=ymin;
+		
+		rand = new Random();
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public JSONObject Waxman(int N, double Bandwidth, Double alpha, Double beta) {
+	public JSONObject Waxman(int N, Double alpha, Double beta) {
 		//Tạo JSON object để lưu topo.
 		JSONObject topoJSON= new JSONObject();	
 		//Adding node JSON
@@ -41,17 +46,14 @@ public class WaxmanGenerator {
 		
 		LinkedList<String> link = new LinkedList();
 		Map<Integer, Integer> idOfNode = new HashMap<Integer, Integer>();
-
-		double linkCapacity = Bandwidth;
-		Random r = new Random();
 		
 		//Đánh tọa độ cho các node trong khoảng cách min max
 		Point2D[] nodeXYPositionTable = new Point2D.Double[N + 1];
 		for (int nodeId = 1; nodeId < N + 1; nodeId++) {
 			idOfNode.put(nodeId, nodeId);
 			nodeXYPositionTable[nodeId] = new Point2D.Double(xmin
-					+ (xmax - xmin) * r.nextDouble(), ymin + (ymax - ymin)
-					* r.nextDouble());
+					+ (xmax - xmin) * rand.nextDouble(), ymin + (ymax - ymin)
+					* rand.nextDouble());
 		}
 		//Tính khoảng cách giữa 2 node
 		double dist_max = -Double.MAX_VALUE;
@@ -91,7 +93,8 @@ public class WaxmanGenerator {
 						|| link.contains(String.valueOf(destinationNodeId)
 								+ " " + String.valueOf(originNodeId)))
 					continue;
-				if (r.nextDouble() < p) {
+				if (rand.nextDouble() < p) {
+					randBW = getRandomBW(upBW, dwBW);
 					//Add link src-dst
 					JSONObject linkJSON=new JSONObject();
 					String srcID=String.valueOf(originNodeId);
@@ -99,7 +102,7 @@ public class WaxmanGenerator {
 					
 					linkJSON.put("src", srcID);
 					linkJSON.put("dst", dstID);
-					linkJSON.put("Bandwidth", linkCapacity);
+					linkJSON.put("Bandwidth", randBW);
 					linkJSON.put("Distance", dist);
 					linkArr.put(srcID+" "+dstID, linkJSON);
 					link.add(String.valueOf(originNodeId) + " "
@@ -109,7 +112,7 @@ public class WaxmanGenerator {
 					linkJSON=new JSONObject();
 					linkJSON.put("src", dstID);
 					linkJSON.put("dst", srcID);
-					linkJSON.put("Bandwidth", linkCapacity);
+					linkJSON.put("Bandwidth", randBW);
 					linkJSON.put("Distance", dist);
 					linkArr.put(dstID+" "+srcID,linkJSON);
 					link.add(String.valueOf(destinationNodeId) + " "
@@ -155,27 +158,30 @@ public class WaxmanGenerator {
 				if (source != 0 && dest != 0)
 				{
 					double dist = nodeXYPositionTable[source].distance(nodeXYPositionTable[dest]);
+					randBW = getRandomBW(upBW, dwBW);
 					//Add link src-dst
 					JSONObject linkJSON=new JSONObject();
 					String srcID=String.valueOf(source);
 					String dstID=String.valueOf(dest);
 					linkJSON.put("src", srcID);
 					linkJSON.put("dst", dstID);
-					linkJSON.put("Bandwidth", linkCapacity);
+					linkJSON.put("Bandwidth", randBW);
 					linkJSON.put("Distance", dist);
 					linkArr.put(srcID+" "+dstID,linkJSON);					
 					//Add link dst-src
 					linkJSON=new JSONObject();
-					//linkJSON.put("Type", "link");
 					linkJSON.put("src", dstID);
 					linkJSON.put("dst", srcID);
-					linkJSON.put("Bandwidth", linkCapacity);
+					linkJSON.put("Bandwidth", randBW);
 					linkJSON.put("Distance", dist);
 					linkArr.put(dstID+" "+srcID,linkJSON);
 				}
 			}
 		}
-//		System.out.println(topoJSON.toJSONString());
 		return topoJSON;
+	}
+	private double getRandomBW(int upBW, int dwBW) {
+		double randBW=dwBW+rand.nextInt(upBW-dwBW)/100*100;
+		return randBW;
 	}
 }

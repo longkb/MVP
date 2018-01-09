@@ -2,8 +2,6 @@ package multisite.cluster.model;
 
 import java.util.HashMap;
 
-import org.apache.derby.tools.sysinfo;
-
 public class Evaluation {
 	//Evaluation
 	public double averageNodeUtilization;
@@ -33,7 +31,7 @@ public class Evaluation {
 //		System.out.println("Max Utilization: "+ max_utilization);
 //		System.out.println("Average Utilization: "+ averageNodeUtilization);
 //		System.out.println("N Used Sites: "+ nUsedSite);
-//		System.out.println("N VNFs per site: "+ nExhausedSite);
+//		System.out.println("N VNFs per site: "+ nVNFperSite);
 		
 //		System.out.println("\n=================================");
 		System.out.println("");
