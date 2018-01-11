@@ -201,19 +201,18 @@ public class NodeMapping{
 		for (String clusterID: clusterDemands.keySet()) {
 			ClusterDemand demand = clusterDemands.get(clusterID);
 			double reqCap = demand.getReqCap();
-			double reqBW = demand.getReqBW();
 			double syncBW = demand.getSyncBW();
 			int nActive = demand.getnActive();
 			//Standby node
 			String nodeID = String.valueOf(1);
-			ClusterNode standbyNode = new ClusterNode(nodeID, reqCap*nActive, reqBW*nActive, syncBW*nActive, "standby", clusterID);
+			ClusterNode standbyNode = new ClusterNode(nodeID, reqCap*nActive, syncBW*nActive, "standby", clusterID);
 			demand.addClusterNode(standbyNode);
 			String nodeIDClusterID = nodeID+ "_"+ clusterID;
 			nodeList.put(nodeIDClusterID, standbyNode);
 			//List of Active Node
 			for(int i = 2; i <= nActive+1; i++) {
 				String id = String.valueOf(i);
-				ClusterNode node = new ClusterNode(id, reqCap, reqBW, syncBW, "active", clusterID);
+				ClusterNode node = new ClusterNode(id, reqCap, syncBW, "active", clusterID);
 				demand.addClusterNode(node);
 				node.addNeighbour(standbyNode);
 				nodeIDClusterID = id+ "_"+ clusterID;

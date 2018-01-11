@@ -4,7 +4,7 @@ import java.util.HashMap;
 
 public class ClusterNode {
 	public String nodeID;
-	public double reqCap, reqBW, syncBW, backupCap;
+	public double reqCap, syncBW, backupCap;
 	public String role;
 	public CloudSite locatedSite;
 	public String clusterID;
@@ -14,15 +14,14 @@ public class ClusterNode {
 	public boolean state;
 	public String nodeID_clusterID;
 	
-	public ClusterNode(String nodeID, double reqCap, double reqBW, double syncBW, String role, String clusterID) {
+	public ClusterNode(String nodeID, double reqCap, double syncBW, String role, String clusterID) {
 		this.nodeID= nodeID;
 		this.reqCap = reqCap;
 		this.backupCap=reqCap;
 		this.role = role;
 		this.clusterID = clusterID;
 		this.syncBW = syncBW;
-		this.reqBW = reqBW;
-		this.outGoingBW = reqBW+syncBW;
+		this.outGoingBW = syncBW;
 		this.rank = 0;
 		this.nodeID_clusterID=nodeID+"_"+clusterID;
 	}

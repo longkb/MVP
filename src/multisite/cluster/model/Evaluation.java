@@ -1,7 +1,5 @@
 package multisite.cluster.model;
 
-import java.util.HashMap;
-
 public class Evaluation {
 	//Evaluation
 	public double averageNodeUtilization;
@@ -34,12 +32,12 @@ public class Evaluation {
 //		System.out.println("N VNFs per site: "+ nVNFperSite);
 		
 //		System.out.println("\n=================================");
-		System.out.println("");
-		System.out.println(aceptanceRatio);
-		System.out.println(max_utilization);
-		System.out.println(averageNodeUtilization);
-		System.out.println(nUsedSite);
-		System.out.println(nVNFperSite);
+//		System.out.println("");
+//		System.out.println(aceptanceRatio);
+//		System.out.println(max_utilization);
+//		System.out.println(averageNodeUtilization);
+//		System.out.println(nUsedSite);
+//		System.out.println(nVNFperSite);
 	}
 	
 	public void putInSum(Evaluation eva) {

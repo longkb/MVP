@@ -1,18 +1,8 @@
 package multisite.cluster.algorithms;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 import org.json.simple.JSONObject;
@@ -20,19 +10,14 @@ import org.json.simple.JSONObject;
 import multisite.cluster.model.BFS;
 import multisite.cluster.model.CloudSite;
 import multisite.cluster.model.ClusterDemand;
-import multisite.cluster.model.ClusterNode;
-import multisite.cluster.model.Database;
 import multisite.cluster.model.Evaluation;
-import multisite.cluster.model.Link;
 import multisite.cluster.model.MappingResult;
 import multisite.cluster.model.ResourceGenerator;
 import multisite.cluster.model.TopoSite;
 import multisite.cluster.model.Topology;
-import multisite.cluster.model.sPath;
 import multisite.cluster.model.vLink;
 
 public class MVP_Algorithm {
-	public Database database;
 	public String sliceName;
 	public String vLink;
 	public ResourceGenerator loadData;

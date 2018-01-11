@@ -3,33 +3,33 @@ package multisite.cluster.model;
 import java.util.LinkedList;
 
 public class ClusterDemand {
-	private String name;
+	private String name, ID;
 	private int nActive, nStandby;
-	private double reqCap, reqBW, syncBW;
+	private double reqCap, syncBW;
 	private LinkedList<ClusterNode> activeNodes;
 	private LinkedList<ClusterNode> standbyNodes;
-	private String status;
 	public LinkedList<vLink> vLinks;
 	
-	public ClusterDemand(String name, int nActive, int nStandby, double reqCap, double reqBW, double syncBW) {
+	public ClusterDemand(String ID, String name, int nActive, int nStandby, double reqCap, double syncBW) {
+		this.ID = ID;
 		this.name=name;
 		this.nActive=nActive;
 		this.nStandby= nStandby;
 		this.reqCap=reqCap;
-		this.reqBW=reqBW;
 		this.syncBW=syncBW;
+		
 		this.activeNodes=new LinkedList<ClusterNode>();
 		this.standbyNodes=new LinkedList<ClusterNode>();
 		this.vLinks=new LinkedList<vLink>();
+	}
+	public String getID() {
+		return ID;
 	}
 	public int getnActive() {
 		return nActive;
 	}
 	public int getnStandby() {
 		return nStandby;
-	}
-	public double getReqBW() {
-		return reqBW;
 	}
 	public double getReqCap() {
 		return reqCap;

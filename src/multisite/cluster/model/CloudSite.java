@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 
 public class CloudSite {
 	public String ID;

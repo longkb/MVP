@@ -19,8 +19,9 @@ public class WaxmanGenerator {
 	private double xmin=0;
 	private double ymax=1000.0;
 	private double ymin=0.0;
-	private int upBW=2000, dwBW=1000;
-	private double randBW;
+	private int upBW=300, dwBW=100;      //Threshold for link bandwidth randomize
+	private int upCapTh=300,dwCapTh=100; //Threshold for site capacity randomize
+	private double randBW, randCap;
 	private Random rand;
 	
 	public WaxmanGenerator(double xmin, double xmax, double ymin, double ymax) {
@@ -76,10 +77,12 @@ public class WaxmanGenerator {
 					JSONArray neighbour=new JSONArray();
 					String nodeID=String.valueOf(originNodeId);
 					
+					randCap = genRandomResource(upCapTh, dwCapTh);
 					nodeJSON.put("ID", nodeID);
+					nodeJSON.put("Neighbor", neighbour);
+					nodeJSON.put("Capacity", randCap);
 					nodeJSON.put("X", xNode);
 					nodeJSON.put("Y", yNode);
-					nodeJSON.put("Neighbor", neighbour);
 					nodeArr.put(nodeID, nodeJSON);
 					continue;
 				}
@@ -94,7 +97,7 @@ public class WaxmanGenerator {
 								+ " " + String.valueOf(originNodeId)))
 					continue;
 				if (rand.nextDouble() < p) {
-					randBW = getRandomBW(upBW, dwBW);
+					randBW = genRandomResource(upBW, dwBW);
 					//Add link src-dst
 					JSONObject linkJSON=new JSONObject();
 					String srcID=String.valueOf(originNodeId);
@@ -158,7 +161,7 @@ public class WaxmanGenerator {
 				if (source != 0 && dest != 0)
 				{
 					double dist = nodeXYPositionTable[source].distance(nodeXYPositionTable[dest]);
-					randBW = getRandomBW(upBW, dwBW);
+					randBW = genRandomResource(upBW, dwBW);
 					//Add link src-dst
 					JSONObject linkJSON=new JSONObject();
 					String srcID=String.valueOf(source);
@@ -180,8 +183,8 @@ public class WaxmanGenerator {
 		}
 		return topoJSON;
 	}
-	private double getRandomBW(int upBW, int dwBW) {
-		double randBW=dwBW+rand.nextInt(upBW-dwBW)/100*100;
-		return randBW;
+	private double genRandomResource(int upTh, int dwTh) {
+		double randResouce=dwTh+rand.nextInt(upTh/10-dwTh/10)*10;
+		return randResouce;
 	}
 }

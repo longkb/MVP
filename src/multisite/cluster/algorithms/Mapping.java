@@ -1,16 +1,11 @@
 package multisite.cluster.algorithms;
 
-import java.sql.Connection;
-
 import org.json.simple.JSONObject;
 
-import multisite.cluster.model.Database;
 import multisite.cluster.model.Evaluation;
 import multisite.cluster.model.ResourceGenerator;
 
 public class Mapping {
-	Connection conn;
-	Database database = new Database();
 	JSONObject graph; //Multi-site topo
 	JSONObject clusterDemand;
 	
