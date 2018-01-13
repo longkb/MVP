@@ -1,14 +1,6 @@
 package multisite.cluster.model;
 
 import java.util.HashMap;
-import java.util.Iterator;
-/**
- * @author LongKB
- */
-import java.util.LinkedList;
-
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 
 public class TopoSite {
 	public HashMap<String, CloudSite> sites;

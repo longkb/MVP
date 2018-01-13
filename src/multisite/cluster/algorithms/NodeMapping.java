@@ -24,7 +24,7 @@ public class NodeMapping{
 	public NodeMapping() {
 	}
 	/**
-	 * Heuristic Load balacner NFV placement
+	 * Heuristic Load balancer NFV placement
 	 * Phân bổ tải đi đều các node, tối thiểu hóa average node utilization
 	 * @param topoSite
 	 */

@@ -1,9 +1,7 @@
 package multisite.cluster.algorithms;
 
-import java.sql.Connection;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
 
 import org.json.simple.JSONObject;
 
@@ -18,20 +16,10 @@ import multisite.cluster.model.Topology;
 import multisite.cluster.model.vLink;
 
 public class MVP_Algorithm {
-	public String sliceName;
-	public String vLink;
 	public ResourceManager loadData;
-	public Connection conn;
 	public BFS bfs;
-	public double maxBwOfLink = 1000;
-	public Map<String, Double> linkBandwidth;
-	public String SE;
 	public double demand, srcreq, dstreq;
 	public NodeMapping nodemapping;
-	public Map<String, String> saveName;
-	public boolean check;
-	public Map<String, Integer> listdemand;
-	public int nFlow = 4;
 	
 	public TopoSite topoSite;
 	public HashMap<String, ClusterDemand>reqClusterList;
@@ -128,10 +116,6 @@ public class MVP_Algorithm {
 		return shortpath;
 	}
 
-	
-	
-	
-	
 	public Evaluation performanceEvaluation(TopoSite topoSite, double nvLinks, MappingResult mapResult) {
 		//Get Maximum Node Utilization
 		HashMap<String, CloudSite> sites = topoSite.sites;

@@ -7,9 +7,9 @@ public class MVP {
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
-		int nNodes=8;
-		int maxDemand=50;
-		int minDemand=50;
+		int nNodes=4;
+		int maxDemand=20;
+		int minDemand=20;
 		double alpha=0.5;
 		double beta=0.5;
 		int nTime=1;

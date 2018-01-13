@@ -24,6 +24,7 @@ public class WaxmanGenerator {
 	private double randBW, randCap;
 	private Random rand;
 	
+	@SuppressWarnings("static-access")
 	public WaxmanGenerator(double xmin, double xmax, double ymin, double ymax) {
 		//Khởi tạo tọa độ max và min của các cloud sites
 		this.xmax=xmax;

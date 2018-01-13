@@ -1,7 +1,5 @@
 package multisite.cluster.model;
 
-import java.util.HashMap;
-
 public class vLink {
 	public ClusterNode src, dst;	
 	public double BW;

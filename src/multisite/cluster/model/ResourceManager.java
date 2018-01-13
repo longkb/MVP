@@ -1,6 +1,5 @@
 package multisite.cluster.model;
 
-import java.awt.geom.Point2D;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -59,7 +58,7 @@ public class ResourceManager {
 	}
 	
 	public JSONObject createMultiSiteTopo() {		
-		WaxmanGenerator waxman = new WaxmanGenerator(0.0, 100.0, 0.0, 100.0);
+		WaxmanGenerator waxman = new WaxmanGenerator(0.0, 1000.0, 0.0, 1000.0);
 		JSONObject graph;
 		graph = waxman.Waxman(nNodes, alpha, beta);
 
