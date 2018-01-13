@@ -12,16 +12,15 @@ import multisite.cluster.model.ClusterDemand;
 import multisite.cluster.model.ClusterNode;
 import multisite.cluster.model.Link;
 import multisite.cluster.model.TopoSite;
-import multisite.cluster.model.Topology;
 
 public class NodeMapping{
 	public HashMap<String, CloudSite> sites;
 	public HashMap<String, Link> links;
 	public HashMap<String, ClusterDemand> clusterDemands;
 	public HashMap<String,ClusterNode> clusterNodes;
-	public Topology topo;
 
 	public NodeMapping() {
+		
 	}
 	/**
 	 * Heuristic Load balancer NFV placement
@@ -188,9 +187,6 @@ public class NodeMapping{
 				}
 			}
 		}
-	}
-	public void initial() {
-		topo = new Topology();
 	}
 
 	/**

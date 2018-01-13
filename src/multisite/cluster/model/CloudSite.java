@@ -28,10 +28,10 @@ public class CloudSite {
 		
 		this.avaiCap=capacity;
 		this.capacity=capacity;
-		this.capU = getResouceUtilization(capacity, avaiCap);
+		this.capU = 0;
 		
 		this.totalBWResource=0;
-		
+		this.bwU= 0;
 		
 		this.neiIDList = new LinkedList<String>();
 		this.neighbours = new HashMap<String, CloudSite>();

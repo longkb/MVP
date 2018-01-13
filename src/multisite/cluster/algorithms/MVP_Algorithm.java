@@ -12,7 +12,6 @@ import multisite.cluster.model.Evaluation;
 import multisite.cluster.model.MappingResult;
 import multisite.cluster.model.ResourceManager;
 import multisite.cluster.model.TopoSite;
-import multisite.cluster.model.Topology;
 import multisite.cluster.model.vLink;
 
 public class MVP_Algorithm {
@@ -31,16 +30,14 @@ public class MVP_Algorithm {
 		eva= new Evaluation();
 	}
 
-	public Topology initial(JSONObject graph, JSONObject demand) {
-		Topology topo=new Topology();
+	public void initial(JSONObject graph, JSONObject demand) {
 		ResourceManager loader = new ResourceManager();
-		loader.loadTopoFromJSON(topoSite, topo);
+		loader.loadTopoFromJSON(topoSite);
 		loader.loadDemandFromJSON(topoSite);
-		return topo;
 	}
 
 	public Evaluation Mapping_HLB_P(JSONObject graph, JSONObject demand) {
-		Topology topo=initial(graph, demand);
+		initial(graph, demand);
 		MappingResult mappingResult = new MappingResult();
 		
 		//Node Mapping
@@ -56,13 +53,13 @@ public class MVP_Algorithm {
 		double nvLinks=reqLinks.size();
 		//Link Mapping
 		LinkMapping LM = new LinkMapping();
-		mappingResult = LM.BFSLinkMapping(topoSite, topo, reqLinks, mappingResult);
+		mappingResult = LM.BFSLinkMapping(topoSite, reqLinks, mappingResult);
 		
 		eva=performanceEvaluation(topoSite, nvLinks, mappingResult);
 		return eva;
 	}
 	public Evaluation Mapping_NeiHEE_P(JSONObject graph, JSONObject demand) {
-		Topology topo=initial(graph, demand);
+		initial(graph, demand);
 		MappingResult mappingResult = new MappingResult();
 		
 		//Node Mapping
@@ -78,13 +75,13 @@ public class MVP_Algorithm {
 		double nvLinks=reqLinks.size();
 		//Link Mapping
 		LinkMapping LM = new LinkMapping();
-		mappingResult = LM.BFSLinkMapping(topoSite, topo, reqLinks, mappingResult);
+		mappingResult = LM.BFSLinkMapping(topoSite, reqLinks, mappingResult);
 		eva=performanceEvaluation(topoSite, nvLinks, mappingResult);
 		return eva;
 	}
 	
 	public Evaluation Mapping_RandomFit_P(JSONObject graph, JSONObject demand) {
-		Topology topo=initial(graph, demand);
+		initial(graph, demand);
 		MappingResult mappingResult = new MappingResult();
 		
 		//Node Mapping
@@ -100,13 +97,13 @@ public class MVP_Algorithm {
 		double nvLinks=reqLinks.size();
 		//Link Mapping
 		LinkMapping LM = new LinkMapping();
-		mappingResult = LM.BFSLinkMapping(topoSite, topo, reqLinks, mappingResult);
+		mappingResult = LM.BFSLinkMapping(topoSite, reqLinks, mappingResult);
 		eva=performanceEvaluation(topoSite, nvLinks, mappingResult);
 		return eva;
 	}
 	
 	
-	public LinkedList<String> getBestPaths(String startNode, String endNode, Topology topo) {
+	public LinkedList<String> getBestPaths(String startNode, String endNode, TopoSite topo) {
 		BFS bfs = new BFS();
 		bfs.setSTART(startNode);
 		bfs.setEND(endNode);

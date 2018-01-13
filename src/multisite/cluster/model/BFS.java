@@ -19,14 +19,14 @@ public class BFS {
 		mypath = new LinkedList<String>();
 	}
 
-	public void run(Topology topo) {
+	public void run(TopoSite topo) {
 		mypath.removeAll(mypath);
 		LinkedList<String> visited = new LinkedList<String>();
 		visited.add(start);
 		breadthFirst(topo, visited);
 	}
 
-	public void breadthFirst(Topology topo, LinkedList<String> visited) {
+	public void breadthFirst(TopoSite topo, LinkedList<String> visited) {
 		LinkedList<String> nodes = topo.adjacentNodes(visited.getLast());
 		for (String node : nodes) {
 
@@ -65,7 +65,7 @@ public class BFS {
 	 * 
 	 *         return all path available
 	 */
-	public LinkedList<String> path(Topology topo) {
+	public LinkedList<String> path(TopoSite topo) {
 
 		String arr = "";
 		String temp = "";

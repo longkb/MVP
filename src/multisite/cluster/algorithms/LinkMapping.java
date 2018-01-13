@@ -14,7 +14,6 @@ import multisite.cluster.model.ClusterNode;
 import multisite.cluster.model.Link;
 import multisite.cluster.model.MappingResult;
 import multisite.cluster.model.TopoSite;
-import multisite.cluster.model.Topology;
 import multisite.cluster.model.sPath;
 import multisite.cluster.model.vLink;
 
@@ -22,7 +21,7 @@ public class LinkMapping {
 	public LinkMapping(){
 		
 	}
-	public MappingResult BFSLinkMapping(TopoSite topoSite, Topology topo, LinkedList<vLink> reqLinks, MappingResult mappingResult) {
+	public MappingResult BFSLinkMapping(TopoSite topoSite, LinkedList<vLink> reqLinks, MappingResult mappingResult) {
 
 		//Link Mapping		
 		while(reqLinks.size()!=0) {
@@ -38,7 +37,7 @@ public class LinkMapping {
 			dstSite=dstNode.locatedSite;
 			
 			HashMap<String, sPath> sPaths;
-			sPaths = getsPaths(srcSite.ID,dstSite.ID, topo, topoSite);
+			sPaths = getsPaths(srcSite.ID,dstSite.ID, topoSite);
 			if(sPaths.size()==0) {
 				mappingResult.failedvLinks.put(vlink.ID,vlink );
 				//Recover Site capacity
@@ -67,9 +66,9 @@ public class LinkMapping {
 		return mappingResult;
 	}
 	
-	public HashMap<String, sPath> getsPaths(String srcSite, String dstSite, Topology topo, TopoSite topoSite) {
+	public HashMap<String, sPath> getsPaths(String srcSite, String dstSite, TopoSite topoSite) {
 		HashMap<String, sPath> sPaths = new HashMap<String, sPath>();
-		LinkedList<String> listPaths = getStringPaths(srcSite, dstSite, topo);
+		LinkedList<String> listPaths = getStringPaths(srcSite, dstSite, topoSite);
 		for (String p : listPaths) {
 			if (p.length() != 0) {
 				CloudSite sSite = topoSite.sites.get(srcSite);
@@ -83,12 +82,13 @@ public class LinkMapping {
 				}
 				spath.strPath=p;
 				sPaths.put(p, spath);
+				System.out.println(p);
 			}
 		}
 		return sortPathByLength(sPaths);
 	}
 	
-	public LinkedList<String> getStringPaths(String startNode, String endNode, Topology topo) {
+	public LinkedList<String> getStringPaths(String startNode, String endNode, TopoSite topo) {
 		BFS bfs = new BFS();
 		bfs.setSTART(startNode);
 		bfs.setEND(endNode);

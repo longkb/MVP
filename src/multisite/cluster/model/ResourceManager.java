@@ -34,14 +34,10 @@ public class ResourceManager {
 	private double nodeCapReq,vLinkBWReq;
 
 	private Random rand;
-	public Topology topo;
-	public LinkedList<String>listSite;
 	public static double N=1, M=1; //Hệ số để tính load từ Cap và BW
 	
 	
 	public ResourceManager(int nNodes, double alpha, double beta, int maxDemand, int minDemand) {
-		topo=new Topology();
-		listSite=new LinkedList<String>();
 		rand = new Random();
 		this.nNodes = nNodes;
 		this.alpha = alpha;
@@ -95,16 +91,9 @@ public class ResourceManager {
 			if (!neighbor.contains(dst)) {
 				neighbor.add(dst);
 			}
-			topo.addNeighbor(src, dst);
 		}
 		//Write Topo to a text file
 		writeToFile(graph, dir+"multisiteTopo.txt");
-		
-		for(String site:sites.keySet()){
-			if (topo.nNeighbors(site)==0)
-				continue;
-			listSite.add(site);
-		}
 		return graph;
 	}
 	public int i=0;
@@ -286,7 +275,7 @@ public class ResourceManager {
 		}
 	}
 
-	public void loadTopoFromJSON(TopoSite topoSite, Topology topo) {
+	public void loadTopoFromJSON(TopoSite topoSite) {
 		JSONParser parser = new JSONParser();
 		JSONObject graph = null;
 		try {
@@ -323,7 +312,7 @@ public class ResourceManager {
 			if (src.equals(dst))
 				continue;
 			//For Routing
-			topo.addNeighbor(src, dst);
+			topoSite.addNeighbor(src, dst);
 			
 			// Get site from JSON
 			if (!sites.containsKey(src)) {
