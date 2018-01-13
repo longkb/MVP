@@ -12,7 +12,7 @@ import multisite.cluster.model.CloudSite;
 import multisite.cluster.model.ClusterDemand;
 import multisite.cluster.model.Evaluation;
 import multisite.cluster.model.MappingResult;
-import multisite.cluster.model.ResourceGenerator;
+import multisite.cluster.model.ResourceManager;
 import multisite.cluster.model.TopoSite;
 import multisite.cluster.model.Topology;
 import multisite.cluster.model.vLink;
@@ -20,7 +20,7 @@ import multisite.cluster.model.vLink;
 public class MVP_Algorithm {
 	public String sliceName;
 	public String vLink;
-	public ResourceGenerator loadData;
+	public ResourceManager loadData;
 	public Connection conn;
 	public BFS bfs;
 	public double maxBwOfLink = 1000;
@@ -45,7 +45,7 @@ public class MVP_Algorithm {
 
 	public Topology initial(JSONObject graph, JSONObject demand) {
 		Topology topo=new Topology();
-		ResourceGenerator loader = new ResourceGenerator();
+		ResourceManager loader = new ResourceManager();
 		loader.loadTopoFromJSON(topoSite, topo);
 		loader.loadDemandFromJSON(topoSite);
 		return topo;
@@ -70,18 +70,6 @@ public class MVP_Algorithm {
 		LinkMapping LM = new LinkMapping();
 		mappingResult = LM.BFSLinkMapping(topoSite, topo, reqLinks, mappingResult);
 		
-//		System.out.println("\nCloud Links:");
-//		for(Link l:topoSite.links.values()) {
-//			System.out.println(l.ID+": "+l.avaiBW);
-//		}
-//		System.out.println("\nCloud Site:");
-//		for(CloudSite site:topoSite.sites.values()) {
-//			System.out.println(site.ID+": "+site.avaiCap+" - "+site.utilization);
-//		}
-//		System.out.println("\nFailed vLinks:");
-//		for(String l:mappingResult.failedvLinks.keySet()) {
-//			System.out.println(l);
-//		}
 		eva=performanceEvaluation(topoSite, nvLinks, mappingResult);
 		return eva;
 	}
@@ -149,13 +137,13 @@ public class MVP_Algorithm {
 		HashMap<String, CloudSite> sites = topoSite.sites;
 		double averageUtilization=0;
 		for(CloudSite site:sites.values()) {
-			if(site.utilization!=0)
+			if(site.capU!=0)
 				eva.nUsedSite+=1;
 				if(site.mNodes.size()>eva.nVNFperSite)
 					eva.nVNFperSite=site.mNodes.size();
-			if(site.utilization>eva.max_utilization)
-				eva.max_utilization=site.utilization;
-			averageUtilization+=site.utilization;
+			if(site.capU>eva.max_utilization)
+				eva.max_utilization=site.capU;
+			averageUtilization+=site.capU;
 		}
 		eva.averageNodeUtilization=averageUtilization/eva.nUsedSite;
 		eva.aceptanceRatio=(mapResult.mappedvLinks.size())/nvLinks;

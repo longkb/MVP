@@ -9,9 +9,8 @@ public class ClusterNode {
 	public CloudSite locatedSite;
 	public String clusterID;
 	public HashMap<String, ClusterNode> neiList;
-	public double outGoingBW;
 	public double rank;
-	public boolean state;
+	public boolean isMapped;
 	public String nodeID_clusterID;
 	
 	public ClusterNode(String nodeID, double reqCap, double syncBW, String role, String clusterID) {
@@ -21,18 +20,17 @@ public class ClusterNode {
 		this.role = role;
 		this.clusterID = clusterID;
 		this.syncBW = syncBW;
-		this.outGoingBW = syncBW;
 		this.rank = 0;
 		this.nodeID_clusterID=nodeID+"_"+clusterID;
 	}
 	public void setLocatedCloudSite(CloudSite locatedCloudSite) {
 		this.locatedSite = locatedCloudSite;
-		state=true;
+		isMapped=true;
 		reqCap=0;
 	}
 	public void unsetLocatedCloudSite(CloudSite locatedCloudSite) {
 		this.locatedSite = null;
-		state=false;
+		isMapped=false;
 		reqCap=backupCap;
 	}
 	public void addNeighbour(ClusterNode neiNode) {

@@ -3,7 +3,7 @@ package multisite.cluster.algorithms;
 import org.json.simple.JSONObject;
 
 import multisite.cluster.model.Evaluation;
-import multisite.cluster.model.ResourceGenerator;
+import multisite.cluster.model.ResourceManager;
 
 public class Mapping {
 	JSONObject graph; //Multi-site topo
@@ -27,9 +27,9 @@ public class Mapping {
 	 * @param args
 	 */
 	public void map(int nNodes, int maxDemand, int minDemand, double alpha, double beta, int nTime) {
-		ResourceGenerator generator;
+		ResourceManager generator;
 		for (int ratio = minDemand; ratio <= maxDemand; ratio = ratio + 10) {
-			generator = new ResourceGenerator(nNodes, alpha, beta, maxDemand, ratio);
+			generator = new ResourceManager(nNodes, alpha, beta, maxDemand, ratio);
 			
 			//Reset all previous results
 			ave_HLB_eval.reset();

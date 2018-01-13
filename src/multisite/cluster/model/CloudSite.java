@@ -8,28 +8,30 @@ import org.json.simple.JSONArray;
 
 public class CloudSite {
 	public String ID;
-	public double avaiCap;
+	public double X, Y;
 	
 	public HashMap<String, CloudSite> neighbours; //Neighbor sites
 	public HashMap<String, ClusterNode> mNodes; //Mapped cluster nodes
 	
-	public double totalLinkReq;
-	public double totalLinkResource;
-	public double usedBW;
-	public double avaiBW;
+	public double totalBWResource;
+	public double avaiLinkBW;
+	public double avaiCap;
 	public double capacity; //original capacity
 	public LinkedList<String> neiIDList;
 	public boolean isUsed;
-	public boolean state;
-	public double utilization;
+	public double capU, bwU;
 	
-	public CloudSite(String ID, double capacity) {
+	public CloudSite(String ID, double capacity, double X, double Y) {
 		this.ID=ID;
+		this.X=X;
+		this.Y=Y;
+		
 		this.avaiCap=capacity;
 		this.capacity=capacity;
-		this.usedBW=0;
-		this.avaiBW=0;
-		getUtilization(capacity, avaiCap);
+		this.capU = getResouceUtilization(capacity, avaiCap);
+		
+		this.totalBWResource=0;
+		
 		
 		this.neiIDList = new LinkedList<String>();
 		this.neighbours = new HashMap<String, CloudSite>();
@@ -43,8 +45,8 @@ public class CloudSite {
 	public int nNeighbour() {
 		return this.neighbours.size();
 	}
-	public void getUtilization(double capacity, double avaiCap) {
-		this.utilization= (capacity-avaiCap)/capacity;
+	public double getResouceUtilization(double totalResouce, double avaiResouce) {
+		return (totalResouce-avaiResouce)/totalResouce;
 	}
 	public void setNeighbourIDList(JSONArray neiIDListJSON) {
 		Iterator<String> iter = neiIDListJSON.iterator();
@@ -53,14 +55,15 @@ public class CloudSite {
 		}
 	}
 	public void addBWResouce(double addtionalBW) {
-		this.avaiBW+=addtionalBW/2;
+		this.totalBWResource+=addtionalBW/2;
+		this.avaiLinkBW=this.totalBWResource;
 	}
 	public void mapClusterNode(ClusterNode mappedNode) {
 		String nodeID_clusterID= mappedNode.nodeID+"_"+mappedNode.clusterID;
 		this.mNodes.put(nodeID_clusterID, mappedNode);
 		this.avaiCap -= mappedNode.reqCap;
-		getUtilization(this.capacity, this.avaiCap);
-		this.usedBW = this.usedBW + mappedNode.outGoingBW;
+		this.capU = getResouceUtilization(this.capacity, this.avaiCap);
+		this.avaiLinkBW = this.avaiLinkBW - mappedNode.syncBW;
 		mappedNode.setLocatedCloudSite(this);
 	}
 	public void unmapClusterNode(ClusterNode unmapNode) {
@@ -68,8 +71,8 @@ public class CloudSite {
 		unmapNode.unsetLocatedCloudSite(this);
 		this.mNodes.remove(nodeID_clusterID, unmapNode);
 		this.avaiCap += unmapNode.reqCap;
-		getUtilization(this.capacity, this.avaiCap);
-		this.usedBW = this.usedBW + unmapNode.outGoingBW;
+		this.capU = getResouceUtilization(this.capacity, this.avaiCap);
+		this.avaiLinkBW = this.avaiLinkBW + unmapNode.syncBW;
 	}
 	
 }

@@ -15,10 +15,10 @@ import org.json.simple.JSONObject;
  *
  */
 public class WaxmanGenerator {
-	private double xmax=1000.0;
-	private double xmin=0;
-	private double ymax=1000.0;
-	private double ymin=0.0;
+	public static double xmax=1000.0;
+	public static double xmin=0;
+	public static double ymax=1000.0;
+	public static double ymin=0.0;
 	private int upBW=300, dwBW=100;      //Threshold for link bandwidth randomize
 	private int upCapTh=300,dwCapTh=100; //Threshold for site capacity randomize
 	private double randBW, randCap;

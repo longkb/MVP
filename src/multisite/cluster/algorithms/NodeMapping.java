@@ -37,7 +37,7 @@ public class NodeMapping{
 		HashMap<String, CloudSite> sortedSites = sort_Site_NeiDec_CapUInc(this.sites);
 		this.clusterNodes = getClusterNodes(this.clusterDemands);
 		HashMap<String, ClusterNode> sortedReqNodes= sort_ClusterNode_NeiDec_RankDec(this.clusterNodes); //Sort by NeiDec_RankDec
-		HashMap<String, ClusterNode> filtedReqNodes= filterByClusterID(sortedReqNodes);  //Filted by ClusterID
+		HashMap<String, ClusterNode> filtedReqNodes= filterByClusterID(sortedReqNodes);  //Filtered by ClusterID
 		mapvNode_HLB_P(sortedSites, filtedReqNodes);
 	}
 	
@@ -152,27 +152,27 @@ public class NodeMapping{
 		}
 		for(ClusterNode reqNode: clusterNodes.values()) {
 			nodeID_clusterID = reqNode.nodeID+"_"+reqNode.clusterID;
-			boolean canTurnOn;
+			boolean canUse;
 			for(CloudSite site:sites.values()) {
-				canTurnOn=true;
+				canUse=true;
 				for(ClusterNode mNode:site.mNodes.values()) {
 					if(mNode.neiList.keySet().contains(nodeID_clusterID))
-						canTurnOn=false;
+						canUse=false;
 				}
 				//If the current site is not using now
-				if(site.state==false) {
+				if(site.isUsed==false) {
 					boolean hasNeighborOn = false;
 					for(CloudSite neiSite:site.neighbours.values()) {
-						if(neiSite.state=true) {
+						if(neiSite.isUsed=true) {
 							hasNeighborOn=true;
 							break;
 						}
 					}
 					if(!hasNeighborOn)
-						canTurnOn=false;
+						canUse=false;
 				}
 				//If total bandwidth requirement is bigger than total site resource
-				if(!canTurnOn)
+				if(!canUse)
 					continue;
 				if(site.mNodes.values().contains(nodeID_clusterID)==false && site.avaiCap>=reqNode.reqCap) {
 					boolean hasNeighbour = false;
@@ -222,7 +222,7 @@ public class NodeMapping{
 		//Calculate Rank for vNode
 		double totalRank=0;
 		for(ClusterNode reqNode:nodeList.values()){
-			reqNode.rank=reqNode.reqCap*reqNode.outGoingBW;
+			reqNode.rank=reqNode.reqCap*reqNode.syncBW;
 			totalRank+=reqNode.rank;
 		}
 		for(ClusterNode reqNode:nodeList.values()){
@@ -275,7 +275,7 @@ public class NodeMapping{
 					public int compare(Map.Entry<String, CloudSite> o1,Map.Entry<String, CloudSite> o2) {
 						int result=Double.compare(o2.getValue().nNeighbour(),o1.getValue().nNeighbour());
 						if(result==0)
-							result=Double.compare(o1.getValue().utilization,o2.getValue().utilization);
+							result=Double.compare(o1.getValue().capU,o2.getValue().capU);
 						return result;
 					}
 				});

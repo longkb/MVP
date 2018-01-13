@@ -1,5 +1,6 @@
 package multisite.cluster.model;
 
+import java.awt.geom.Point2D;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -20,9 +21,9 @@ import org.json.simple.parser.ParseException;
  * @author LongKB
  *
  */
-public class ResourceGenerator {
+public class ResourceManager {
 	//Parameters
-	public int nNode;
+	public int nNodes;
 	public int maxDemand;
 	public int minDemand;
 	public Double alpha;
@@ -39,19 +40,19 @@ public class ResourceGenerator {
 	public static double N=1, M=1; //Hệ số để tính load từ Cap và BW
 	
 	
-	public ResourceGenerator(int nNodes, double alpha, double beta, int maxDemand, int minDemand) {
+	public ResourceManager(int nNodes, double alpha, double beta, int maxDemand, int minDemand) {
 		topo=new Topology();
 		listSite=new LinkedList<String>();
 		rand = new Random();
-		this.nNode = nNodes;
+		this.nNodes = nNodes;
 		this.alpha = alpha;
 		this.beta = beta;
 		this.maxDemand = maxDemand;
 		this.minDemand = minDemand;
 	}
 	
-	public ResourceGenerator() {
-		// TODO Auto-generated constructor stub
+	public ResourceManager() {
+		
 	}
 	public void setMinDemand(int minDemand) {
 		this.minDemand = minDemand;
@@ -60,11 +61,11 @@ public class ResourceGenerator {
 	public JSONObject createMultiSiteTopo() {		
 		WaxmanGenerator waxman = new WaxmanGenerator(0.0, 100.0, 0.0, 100.0);
 		JSONObject graph;
-		graph = waxman.Waxman(nNode, alpha, beta);
+		graph = waxman.Waxman(nNodes, alpha, beta);
 
 		totalCap=0;
 		totalBW=0;
-		String siteID, S, D;
+		String siteID, src, dst;
 		Map<String, Double>sites=new HashMap<String, Double>();
 		double capacity, linkBW;
 
@@ -84,18 +85,18 @@ public class ResourceGenerator {
 		while (linkIterator.hasNext()) {
 			entry = linkIterator.next();
 			
-			S=(String)entry.get("src");
-			D=(String)entry.get("dst");
+			src=(String)entry.get("src");
+			dst=(String)entry.get("dst");
 			linkBW=(Double)entry.get("Bandwidth");
 			totalBW+=linkBW/2;
 			
 			//Add neighbour cho node S
-			JSONObject srcNode=(JSONObject) siteArr.get(S);
+			JSONObject srcNode=(JSONObject) siteArr.get(src);
 			JSONArray neighbor=(JSONArray) srcNode.get("Neighbor");
-			if (!neighbor.contains(D)) {
-				neighbor.add(D);
+			if (!neighbor.contains(dst)) {
+				neighbor.add(dst);
 			}
-			topo.addNeighbor(S, D);
+			topo.addNeighbor(src, dst);
 		}
 		//Write Topo to a text file
 		writeToFile(graph, dir+"multisiteTopo.txt");
@@ -113,9 +114,9 @@ public class ResourceGenerator {
 		JSONObject CRs=new JSONObject(); //The list of incomming Cluster Requests
 		
 		targetLoad=(double)minDemand/100;
-		double BWRatio, capRatio;
 		int crCounter=0;
-		int nCR=nNode;
+		int nCR=nNodes;
+		double reqX, reqY;
 		nodeCapReq=0;
 		vLinkBWReq=0;
 		tempLoad=0;
@@ -127,6 +128,12 @@ public class ResourceGenerator {
 			clusterJSON.put("Name", crName);
 			String crID = String.valueOf(1+rand.nextInt(nCR));
 			clusterJSON.put("ID", crID);
+			
+			//Random tọa độ yêu cầu
+			reqX=((double)rand.nextInt((int) (WaxmanGenerator.xmax*1000)))/1000;
+			reqY=((double)rand.nextInt((int) (WaxmanGenerator.ymax*1000)))/1000;
+			clusterJSON.put("reqX", reqX);
+			clusterJSON.put("reqY", reqY);
 			
 			//Tạo JSON để lưu cấu hình của cluster
 			JSONObject configJSON=new JSONObject();
@@ -143,15 +150,15 @@ public class ResourceGenerator {
 				CRs.remove(crName);
 			}
 		}
-		BWRatio=vLinkBWReq/totalBW;
-		capRatio=nodeCapReq/totalCap;
+		double BWRatio=vLinkBWReq/totalBW;
+		double capRatio=nodeCapReq/totalCap;
 //		System.out.println("\nBandwidth: "+vLinkBWReq);
 //		System.out.println("Total BW: "+totalBW);
 //		System.out.println("Capacity: "+nodeCapReq);
 //		System.out.println("Total Cap: "+totalCap);
-//		System.out.println("BW ratio: "+ BWRatio);
-//		System.out.println("Cap ratio: "+ capRatio);
-//		System.out.println("Ratio: "+ (N*capRatio+M*BWRatio)/(N+M));
+		System.out.println("BW ratio: "+ BWRatio);
+		System.out.println("Cap ratio: "+ capRatio);
+		System.out.println("Ratio: "+ (N*capRatio+M*BWRatio)/(N+M));
 		
 		writeToFile(CRs, dir+"clusterDemand.txt");
 		return CRs;
@@ -162,7 +169,6 @@ public class ResourceGenerator {
 	/*
 	 * Generate a new demand with specific Name
 	 */
-	@SuppressWarnings("unchecked")
 	public boolean genClusterDemand(String clusterName, JSONObject configurationJSON){
 
 		//Ngưỡng để random số active, standby node
@@ -300,11 +306,12 @@ public class ResourceGenerator {
 		HashMap<String, Link> links = new HashMap<String, Link>();
 		//JSON variables
 		JSONObject siteJSONList = (JSONObject) graph.get("Site");
-		JSONObject linkList = (JSONObject) graph.get("Link");
-		Iterator<JSONObject> iter = linkList.values().iterator();
+		JSONObject linkJSONList = (JSONObject) graph.get("Link");
+		Iterator<JSONObject> iter = linkJSONList.values().iterator();
 		JSONObject linkJSON;
 		String dst, src;
-		Double bw;
+		double X, Y;
+		Double bw, distance;
 		JSONObject srcJSON, dstJSON;
 		CloudSite srcSite, dstSite;
 		while (iter.hasNext()) {
@@ -312,6 +319,7 @@ public class ResourceGenerator {
 			src = (String) linkJSON.get("src");
 			dst = (String) linkJSON.get("dst");
 			bw = (Double) linkJSON.get("Bandwidth");
+			distance = (Double) linkJSON.get("Distance");
 
 			if (src.equals(dst))
 				continue;
@@ -323,8 +331,10 @@ public class ResourceGenerator {
 				srcJSON = (JSONObject) siteJSONList.get(src);
 				String ID = (String) srcJSON.get("ID");
 				double capacity = (double) srcJSON.get("Capacity");
+				X = (double) srcJSON.get("X");
+				Y = (double) srcJSON.get("Y");
 
-				srcSite = new CloudSite(ID, capacity);
+				srcSite = new CloudSite(ID, capacity, X, Y);
 				srcSite.setNeighbourIDList((JSONArray) srcJSON.get("Neighbor"));
 				sites.put(ID, srcSite);
 			} else {
@@ -335,8 +345,10 @@ public class ResourceGenerator {
 				dstJSON = (JSONObject) siteJSONList.get(dst);
 				String ID = (String) dstJSON.get("ID");
 				double capacity = (double) dstJSON.get("Capacity");
+				X = (double) dstJSON.get("X");
+				Y = (double) dstJSON.get("Y");
 
-				dstSite = new CloudSite(ID, capacity);
+				dstSite = new CloudSite(ID, capacity, X, Y);
 				dstSite.setNeighbourIDList((JSONArray) dstJSON.get("Neighbor"));
 
 				sites.put(ID, dstSite);
@@ -346,12 +358,11 @@ public class ResourceGenerator {
 
 			// Get link from JSON
 			if (!links.containsKey(src + " " + dst)) {
-				Link link = new Link(srcSite, dstSite, bw);
+				Link link = new Link(srcSite, dstSite, bw, distance);
 				links.put(src + " " + dst, link);
 			}
 		}
 		//Add BWresouce to cloud sites
-		double BWresouce=0;
 		for (Link link: links.values()) {
 			link.src.addBWResouce(link.BW);
 			link.dst.addBWResouce(link.BW);
@@ -387,7 +398,7 @@ public class ResourceGenerator {
 		HashMap<String, ClusterDemand> reqClusterList = new HashMap<String, ClusterDemand>();
 		
 		Iterator<JSONObject> iter = demand.values().iterator();
-		JSONObject reqClusterJSON, configJSON, clientJSON;
+		JSONObject reqClusterJSON, configJSON;
 		ClusterDemand reqCluster;
 		while (iter.hasNext()) {
 			reqClusterJSON = iter.next();
@@ -402,7 +413,6 @@ public class ResourceGenerator {
 				n = (Long)configJSON.get("Standby");
 				int nStandby = n.intValue();
 				double syncBW = (double) configJSON.get("syncBW");
-				double reqBW = (double) configJSON.get("reqBW");
 				double reqCap = (double) configJSON.get("reqCapacity");
 				reqCluster = new ClusterDemand(crID, name, nActive, nStandby, reqCap, syncBW);
 				reqClusterList.put(name, reqCluster);
