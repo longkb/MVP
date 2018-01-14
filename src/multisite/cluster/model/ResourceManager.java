@@ -144,9 +144,9 @@ public class ResourceManager {
 //		System.out.println("Total BW: "+totalBW);
 //		System.out.println("Capacity: "+nodeCapReq);
 //		System.out.println("Total Cap: "+totalCap);
-		System.out.println("BW ratio: "+ BWRatio);
-		System.out.println("Cap ratio: "+ capRatio);
-		System.out.println("Ratio: "+ (N*capRatio+M*BWRatio)/(N+M));
+//		System.out.println("BW ratio: "+ BWRatio);
+//		System.out.println("Cap ratio: "+ capRatio);
+//		System.out.println("Ratio: "+ (N*capRatio+M*BWRatio)/(N+M));
 		
 		writeToFile(CRs, dir+"clusterDemand.txt");
 		return CRs;
@@ -191,7 +191,7 @@ public class ResourceManager {
 		
 		newLoad=getLoad(nodeCapReq,vLinkBWReq);  //Load sau khi sinh demand
 		//Nếu load mới bằng load đặt ra, thêm demand thành công
-		if(newLoad==targetLoad){ 
+		if(newLoad<=targetLoad && newLoad >= targetLoad-0.01){ 
 			addNewDemand(configurationJSON, nActive, nStandby, nodeCap, syncBW);
 			return true;
 		}
@@ -204,9 +204,8 @@ public class ResourceManager {
 			double deltaBW;
 			syncBW=0;
 			while(syncBW<=0 || syncBW>upReqBWTh){
-				if (i>150) {
+				if (i>150)
 					return true;
-				}
 				//Random số active, standby node trong cluster
 				nActive=rand.nextInt(upTh_nNodes)+1;
 				nStandby=1;
@@ -220,8 +219,10 @@ public class ResourceManager {
 				
 				syncBW=deltaBW/nActive;
 				syncBW=(double)((int)(syncBW/10)*10); //Làm tròn
-				if(syncBW<=0 || syncBW>upReqBWTh)
+				if(syncBW<=0 || syncBW>upReqBWTh) {
+					i++;
 					continue;
+				}
 
 				vLinkBWReq+=syncBW*nActive;
 				nodeCapReq+=(1+nStandby)*nActive*nodeCap; 

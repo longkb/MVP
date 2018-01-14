@@ -56,7 +56,7 @@ public class Mapping {
 //			ave_RF_eval.getAverageResult(nTime);
 //			ave_RF_eval.printOut();
 		}
-		System.out.println("Done!");
+		System.out.println("\nDone!");
 	}
 
 	/**
