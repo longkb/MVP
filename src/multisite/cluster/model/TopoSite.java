@@ -9,14 +9,14 @@ public class TopoSite {
 	public HashMap<String, CloudSite> sites;
 	public HashMap<String, Link> links;
 	public HashMap<String, ClusterDemand> reqClusterList;
-	private Map<String, LinkedHashSet<String>> map;
+	private Map<String, LinkedHashSet<String>> routingMap;
 	public LinkedList<String> forgetLink;
 
 	public TopoSite() {
 		sites = new HashMap<String, CloudSite>();
 		links = new HashMap<String, Link>();
-
-		map=new HashMap<String, LinkedHashSet<String>>();
+		
+		routingMap=new HashMap<String, LinkedHashSet<String>>();
 		forgetLink=new LinkedList<String>();
 	}
 
@@ -33,32 +33,21 @@ public class TopoSite {
 	public void addNeighbor(String node1,String node2){
 		if(node1.equals(node2))
 			return;
-		LinkedHashSet<String>neighbor=map.get(node1);
+		LinkedHashSet<String>neighbor=routingMap.get(node1);
 		if (neighbor==null) {
 			neighbor=new LinkedHashSet<String>();
-			map.put(node1, neighbor);
+			routingMap.put(node1, neighbor);
 		}
 		neighbor.add(node2);
 	}
 	//Older one
 	public LinkedList<String> adjacentNodes(String node) {
-		LinkedHashSet<String> adjacent = map.get(node);
+		LinkedHashSet<String> adjacent = routingMap.get(node);
 		if (adjacent == null) {
 			return new LinkedList<String>();
 		}
 		return new LinkedList<String>(adjacent);
 	}
-	public int nNeighbors(String node) {
-		LinkedHashSet<String> adjacent = map.get(node);
-		if (adjacent == null) {
-			return 0;
-		}
-		return map.get(node).size();
-	}
-	public LinkedList<String> getForgetLink() {
-		return forgetLink;
-	}
-	
 	public void addForgetLink(String link){
 		forgetLink.add(link);
 	}

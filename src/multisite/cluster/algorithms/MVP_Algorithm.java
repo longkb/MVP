@@ -53,8 +53,8 @@ public class MVP_Algorithm {
 		double nvLinks=reqLinks.size();
 		//Link Mapping
 		LinkMapping LM = new LinkMapping();
+
 		mappingResult = LM.BFSLinkMapping(topoSite, reqLinks, mappingResult);
-		
 		eva=performanceEvaluation(topoSite, nvLinks, mappingResult);
 		return eva;
 	}
@@ -104,9 +104,7 @@ public class MVP_Algorithm {
 	
 	
 	public LinkedList<String> getBestPaths(String startNode, String endNode, TopoSite topo) {
-		BFS bfs = new BFS();
-		bfs.setSTART(startNode);
-		bfs.setEND(endNode);
+		BFS bfs = new BFS(startNode, endNode);
 		bfs.run(topo);
 		LinkedList<String> shortpath = new LinkedList<String>();
 		shortpath = bfs.path(topo);

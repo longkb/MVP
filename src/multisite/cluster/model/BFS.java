@@ -11,16 +11,16 @@ public class BFS {
 
 	private String start;
 	private String end;
-	private LinkedList<String> mypath;
+	private LinkedList<String> myPath;
 
-	public BFS() {
-		start = null;
-		end = null;
-		mypath = new LinkedList<String>();
+	public BFS(String start, String end) {
+		this.start = start;
+		this.end = end;
+		myPath = new LinkedList<String>();
 	}
 
 	public void run(TopoSite topo) {
-		mypath.removeAll(mypath);
+		myPath.removeAll(myPath);
 		LinkedList<String> visited = new LinkedList<String>();
 		visited.add(start);
 		breadthFirst(topo, visited);
@@ -35,7 +35,7 @@ public class BFS {
 			
 			if (node.equals(end)) {
 				visited.add(node);
-				printPath(visited);
+				addNodesInPath(visited);
 				visited.removeLast();
 				break;
 			}
@@ -50,14 +50,13 @@ public class BFS {
 			breadthFirst(topo, visited);
 			visited.removeLast();
 		}
-
 	}
 
-	public void printPath(LinkedList<String> visited) {
+	public void addNodesInPath(LinkedList<String> visited) {
 		for (String node : visited) {
-			mypath.add(node);
+			myPath.add(node);
 		}
-		mypath.add("_");
+		myPath.add("_");
 	}
 
 	/**
@@ -73,12 +72,11 @@ public class BFS {
 		int j = 0;
 		String arr1 = "";
 		LinkedList<String> shortpath = new LinkedList<String>();
-		for (String node : mypath) {
+		for (String node : myPath) {
 			if (node == "_") {
 				if (i <= length) {
 					temp = arr;
 					length = i;
-
 				}
 				arr = "";
 				i = 0;
@@ -89,18 +87,15 @@ public class BFS {
 					arr = arr + " " + node;
 				i = i + 1;
 			}
-
 		}
 		shortpath.add(temp);
-		for (String node : mypath) {
+		for (String node : myPath) {
 			if (node == "_") {
 				if (j == length) {
 
 					if (arr1.equals(temp) == false) {
 						shortpath.add(arr1);
-
 					}
-
 				}
 				arr1 = "";
 				j = 0;
@@ -108,32 +103,21 @@ public class BFS {
 				if(arr1.equals(""))
 					arr1=node;
 				else
-					
 					arr1 = arr1 + " " + node;
 				j = j + 1;
 			}
-
 		}
-		LinkedList<String> forgetlink = topo.getForgetLink();
-		for (int a = 0; a < forgetlink.size(); a++)
-			for (int b = 0; b < shortpath.size(); b++) {
-				if (forgetlink.get(a).equals(shortpath.get(b))) {
-					shortpath.remove(b);
+		LinkedList<String> forgetlink = topo.forgetLink;
+		for (int h = 0; h < forgetlink.size(); h++)
+			for (int k = 0; k < shortpath.size(); k++) {
+				if (forgetlink.get(h).equals(shortpath.get(k))) {
+					shortpath.remove(k);
 				}
 			}
-		
 		return shortpath;
 	}
 
 	public LinkedList<String> getMypath() {
-		return mypath;
-	}
-
-	public void setSTART(String sTART) {
-		start = sTART;
-	}
-
-	public void setEND(String eND) {
-		end = eND;
+		return myPath;
 	}
 }
