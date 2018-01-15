@@ -53,6 +53,7 @@ public class ResourceManager {
 		this.minDemand = minDemand;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public JSONObject createMultiSiteTopo() {		
 		WaxmanGenerator waxman = new WaxmanGenerator(0.0, 1000.0, 0.0, 1000.0);
 		JSONObject graph;
@@ -97,7 +98,7 @@ public class ResourceManager {
 		return graph;
 	}
 	public int i=0;
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "unused" })
 	public JSONObject createClusterDemand(JSONObject graph){
 		JSONObject CRs=new JSONObject(); //The list of incomming Cluster Requests
 		
@@ -276,6 +277,7 @@ public class ResourceManager {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	public void loadTopoFromJSON(TopoSite topoSite) {
 		JSONParser parser = new JSONParser();
 		JSONObject graph = null;
@@ -369,6 +371,7 @@ public class ResourceManager {
 		topoSite.sites=sites;
 	}
 
+	@SuppressWarnings("unchecked")
 	public void loadDemandFromJSON(TopoSite topoSite) {
 		JSONParser parser = new JSONParser();
 		JSONObject demand=null;

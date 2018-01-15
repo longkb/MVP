@@ -5,29 +5,29 @@ import java.util.LinkedList;
 
 /**
  * @author huynhhust
- *
  */
 public class BFS {
-
 	private String start;
 	private String end;
 	private LinkedList<String> myPath;
-
-	public BFS(String start, String end) {
-		this.start = start;
-		this.end = end;
+	private TopoSite topoSite;
+	public BFS(TopoSite topo) {
 		myPath = new LinkedList<String>();
+		this.topoSite = topo;
 	}
 
-	public void run(TopoSite topo) {
+	public void routing(String start, String end) {
+		this.start = start;
+		this.end = end;
+		
 		myPath.removeAll(myPath);
 		LinkedList<String> visited = new LinkedList<String>();
 		visited.add(start);
-		breadthFirst(topo, visited);
+		breadthFirst(visited);
 	}
 
-	public void breadthFirst(TopoSite topo, LinkedList<String> visited) {
-		LinkedList<String> nodes = topo.adjacentNodes(visited.getLast());
+	public void breadthFirst(LinkedList<String> visited) {
+		LinkedList<String> nodes = this.topoSite.adjacentNodes(visited.getLast());
 		for (String node : nodes) {
 
 			if (visited.contains(node))
@@ -47,7 +47,7 @@ public class BFS {
 				continue;
 			}
 			visited.addLast(node);
-			breadthFirst(topo, visited);
+			breadthFirst(visited);
 			visited.removeLast();
 		}
 	}
@@ -61,10 +61,9 @@ public class BFS {
 
 	/**
 	 * @author huynhnv
-	 * 
-	 *         return all path available
+	 * return all path available
 	 */
-	public LinkedList<String> path(TopoSite topo) {
+	public LinkedList<String> getPaths() {
 
 		String arr = "";
 		String temp = "";
@@ -107,7 +106,7 @@ public class BFS {
 				j = j + 1;
 			}
 		}
-		LinkedList<String> forgetlink = topo.forgetLink;
+		LinkedList<String> forgetlink = this.topoSite.forgetLink;
 		for (int h = 0; h < forgetlink.size(); h++)
 			for (int k = 0; k < shortpath.size(); k++) {
 				if (forgetlink.get(h).equals(shortpath.get(k))) {

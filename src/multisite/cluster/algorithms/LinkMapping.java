@@ -82,14 +82,15 @@ public class LinkMapping {
 				}
 				spath.strPath=p;
 				sPaths.put(p, spath);
+//				System.out.println(p);
 			}
 		}
 		return sortPathByLength(sPaths);
 	}
 	
-	public LinkedList<String> getStringPaths(String startNode, String endNode, TopoSite topo) {
-		BFS bfs = new BFS(startNode, endNode);
-		bfs.run(topo);
+	public LinkedList<String> getStringPaths(String startNode, String endNode, TopoSite topoSite) {
+		BFS bfs = new BFS(topoSite);
+		bfs.routing(startNode, endNode);
 		LinkedList<String> path = bfs.getMypath();
 		LinkedList<String> listPaths = new LinkedList<String>();
 		String temp = "";

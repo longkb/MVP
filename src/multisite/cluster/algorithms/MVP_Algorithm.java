@@ -29,7 +29,9 @@ public class MVP_Algorithm {
 		topoSite = new TopoSite();
 		eva= new Evaluation();
 	}
-
+	/*
+	 * Load Toposite and cluster request from files
+	 */
 	public void initial(JSONObject graph, JSONObject demand) {
 		ResourceManager loader = new ResourceManager();
 		loader.loadTopoFromJSON(topoSite);
@@ -38,7 +40,6 @@ public class MVP_Algorithm {
 
 	public Evaluation Mapping_HLB_P(JSONObject graph, JSONObject demand) {
 		initial(graph, demand);
-		MappingResult mappingResult = new MappingResult();
 		
 		//Node Mapping
 		nodemapping.HLB_P(this.topoSite);
@@ -54,13 +55,13 @@ public class MVP_Algorithm {
 		//Link Mapping
 		LinkMapping LM = new LinkMapping();
 
+		MappingResult mappingResult = new MappingResult();
 		mappingResult = LM.BFSLinkMapping(topoSite, reqLinks, mappingResult);
 		eva=performanceEvaluation(topoSite, nvLinks, mappingResult);
 		return eva;
 	}
 	public Evaluation Mapping_NeiHEE_P(JSONObject graph, JSONObject demand) {
 		initial(graph, demand);
-		MappingResult mappingResult = new MappingResult();
 		
 		//Node Mapping
 		nodemapping.NeighborGreedy_P(this.topoSite);
@@ -73,8 +74,10 @@ public class MVP_Algorithm {
 			reqLinks.addAll(vLinks);
 		}
 		double nvLinks=reqLinks.size();
+		
 		//Link Mapping
 		LinkMapping LM = new LinkMapping();
+		MappingResult mappingResult = new MappingResult();
 		mappingResult = LM.BFSLinkMapping(topoSite, reqLinks, mappingResult);
 		eva=performanceEvaluation(topoSite, nvLinks, mappingResult);
 		return eva;
@@ -82,7 +85,6 @@ public class MVP_Algorithm {
 	
 	public Evaluation Mapping_RandomFit_P(JSONObject graph, JSONObject demand) {
 		initial(graph, demand);
-		MappingResult mappingResult = new MappingResult();
 		
 		//Node Mapping
 		nodemapping.RF_P(this.topoSite);
@@ -95,20 +97,21 @@ public class MVP_Algorithm {
 			reqLinks.addAll(vLinks);
 		}
 		double nvLinks=reqLinks.size();
+		
 		//Link Mapping
 		LinkMapping LM = new LinkMapping();
+		MappingResult mappingResult = new MappingResult();
 		mappingResult = LM.BFSLinkMapping(topoSite, reqLinks, mappingResult);
 		eva=performanceEvaluation(topoSite, nvLinks, mappingResult);
 		return eva;
 	}
 	
-	
-	public LinkedList<String> getBestPaths(String startNode, String endNode, TopoSite topo) {
-		BFS bfs = new BFS(startNode, endNode);
-		bfs.run(topo);
-		LinkedList<String> shortpath = new LinkedList<String>();
-		shortpath = bfs.path(topo);
-		return shortpath;
+	public LinkedList<String> getPaths(String startNode, String endNode, TopoSite topoSite) {
+		BFS bfs = new BFS(topoSite);
+		bfs.routing(startNode, endNode);
+		LinkedList<String> paths = new LinkedList<String>();
+		paths = bfs.getPaths();
+		return paths;
 	}
 
 	public Evaluation performanceEvaluation(TopoSite topoSite, double nvLinks, MappingResult mapResult) {
