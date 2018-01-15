@@ -48,6 +48,7 @@ public class CloudSite {
 	public double getResouceUtilization(double totalResouce, double avaiResouce) {
 		return (totalResouce-avaiResouce)/totalResouce;
 	}
+	@SuppressWarnings("unchecked")
 	public void setNeighbourIDList(JSONArray neiIDListJSON) {
 		Iterator<String> iter = neiIDListJSON.iterator();
 		while(iter.hasNext()) {
@@ -59,7 +60,7 @@ public class CloudSite {
 		this.avaiLinkBW=this.totalBWResource;
 	}
 	public void mapClusterNode(ClusterNode mappedNode) {
-		String nodeID_clusterID= mappedNode.nodeID+"_"+mappedNode.clusterID;
+		String nodeID_clusterID= mappedNode.nodeID+"_"+mappedNode.crID;
 		this.mNodes.put(nodeID_clusterID, mappedNode);
 		this.avaiCap -= mappedNode.reqCap;
 		this.capU = getResouceUtilization(this.capacity, this.avaiCap);
@@ -67,7 +68,7 @@ public class CloudSite {
 		mappedNode.setLocatedCloudSite(this);
 	}
 	public void unmapClusterNode(ClusterNode unmapNode) {
-		String nodeID_clusterID= unmapNode.nodeID+"_"+unmapNode.clusterID;
+		String nodeID_clusterID= unmapNode.nodeID+"_"+unmapNode.crID;
 		unmapNode.unsetLocatedCloudSite(this);
 		this.mNodes.remove(nodeID_clusterID, unmapNode);
 		this.avaiCap += unmapNode.reqCap;

@@ -7,21 +7,23 @@ public class ClusterNode {
 	public double reqCap, syncBW, backupCap;
 	public String role;
 	public CloudSite locatedSite;
-	public String clusterID;
+	public String crID, crName;
 	public HashMap<String, ClusterNode> neiList;
 	public double rank;
 	public boolean isMapped;
-	public String nodeID_clusterID;
+	public String nodeID_crID;
+	public static String ACTIVE = "active";
+	public static String STANDBY = "standby";
 	
-	public ClusterNode(String nodeID, double reqCap, double syncBW, String role, String clusterID) {
+	public ClusterNode(String nodeID, double reqCap, double syncBW, String role, String crID, String crName) {
 		this.nodeID= nodeID;
 		this.reqCap = reqCap;
 		this.backupCap=reqCap;
 		this.role = role;
-		this.clusterID = clusterID;
+		this.crID = crID;
+		this.crName = crName;
 		this.syncBW = syncBW;
-		this.rank = 0;
-		this.nodeID_clusterID=nodeID+"_"+clusterID;
+		this.nodeID_crID=nodeID+"_"+crID;
 	}
 	public void setLocatedCloudSite(CloudSite locatedCloudSite) {
 		this.locatedSite = locatedCloudSite;
@@ -36,8 +38,8 @@ public class ClusterNode {
 	public void addNeighbour(ClusterNode neiNode) {
 		if(neiList==null)
 			neiList = new HashMap<String, ClusterNode>();
-		if(!neiList.containsKey(neiNode.nodeID_clusterID)) {
-			neiList.put(neiNode.nodeID_clusterID, neiNode);
+		if(!neiList.containsKey(neiNode.nodeID_crID)) {
+			neiList.put(neiNode.nodeID_crID, neiNode);
 			neiNode.addNeighbour(this);
 		}
 	}
@@ -46,5 +48,8 @@ public class ClusterNode {
 	}
 	public int getNNeighbour() {
 		return this.neiList.size();
+	}
+	public void getNodeRank(double totalReqCap, double totalReqBW) {
+		this.rank=(this.reqCap/totalReqCap+this.syncBW/totalReqBW)/2;
 	}
 }

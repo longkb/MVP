@@ -10,7 +10,7 @@ public class vLink {
 	public vLink(ClusterNode src, ClusterNode dst, double syncBW) {
 		this.src= src;
 		this.dst = dst;
-		this.clusterID= src.clusterID;
+		this.clusterID= src.crID;
 		this.ID= src.nodeID+" "+dst.nodeID+" "+this.clusterID;
 		this.BW=syncBW;
 	}

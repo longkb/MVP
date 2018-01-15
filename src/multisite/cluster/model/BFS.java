@@ -7,6 +7,7 @@ import java.util.LinkedList;
  * @author huynhhust
  */
 public class BFS {
+	@SuppressWarnings("unused")
 	private String start;
 	private String end;
 	private LinkedList<String> myPath;

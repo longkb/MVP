@@ -7,7 +7,7 @@ import org.json.simple.JSONObject;
 
 import multisite.cluster.model.BFS;
 import multisite.cluster.model.CloudSite;
-import multisite.cluster.model.ClusterDemand;
+import multisite.cluster.model.ClusterRequest;
 import multisite.cluster.model.Evaluation;
 import multisite.cluster.model.MappingResult;
 import multisite.cluster.model.ResourceManager;
@@ -15,40 +15,39 @@ import multisite.cluster.model.TopoSite;
 import multisite.cluster.model.vLink;
 
 public class MVP_Algorithm {
-	public ResourceManager loadData;
 	public BFS bfs;
-	public double demand, srcreq, dstreq;
 	public NodeMapping nodemapping;
+	public ResourceManager loader;
 	
 	public TopoSite topoSite;
-	public HashMap<String, ClusterDemand>reqClusterList;
+	public HashMap<String, ClusterRequest>reqClusterList;
 	public Evaluation eva;
 	
 	public MVP_Algorithm() {
 		nodemapping = new NodeMapping();
 		topoSite = new TopoSite();
 		eva= new Evaluation();
+		loader = new ResourceManager();
 	}
 	/*
 	 * Load Toposite and cluster request from files
 	 */
-	public void initial(JSONObject graph, JSONObject demand) {
-		ResourceManager loader = new ResourceManager();
+	public void initial(JSONObject graph, JSONObject clusterRequest) {
 		loader.loadTopoFromJSON(topoSite);
-		loader.loadDemandFromJSON(topoSite);
+		loader.loadCRsFromJSON(topoSite);
 	}
 
-	public Evaluation Mapping_HLB_P(JSONObject graph, JSONObject demand) {
-		initial(graph, demand);
+	public Evaluation Mapping_HLB_P(JSONObject graph, JSONObject clusterRequest) {
+		initial(graph, clusterRequest);
 		
 		//Node Mapping
 		nodemapping.HLB_P(this.topoSite);
 		
 		//Load vLink requirement
-		HashMap<String, ClusterDemand>clusterDemands = nodemapping.clusterDemands;
+		HashMap<String, ClusterRequest>CRs = nodemapping.CRs;
 		LinkedList<vLink> reqLinks= new LinkedList<>();
-		for(ClusterDemand dm:clusterDemands.values()) {
-			LinkedList<vLink>vLinks=dm.vLinks;
+		for(ClusterRequest cr:CRs.values()) {
+			LinkedList<vLink>vLinks=cr.vLinks;
 			reqLinks.addAll(vLinks);
 		}
 		double nvLinks=reqLinks.size();
@@ -60,17 +59,17 @@ public class MVP_Algorithm {
 		eva=performanceEvaluation(topoSite, nvLinks, mappingResult);
 		return eva;
 	}
-	public Evaluation Mapping_NeiHEE_P(JSONObject graph, JSONObject demand) {
-		initial(graph, demand);
+	public Evaluation Mapping_NeiHEE_P(JSONObject graph, JSONObject clusterRequest) {
+		initial(graph, clusterRequest);
 		
 		//Node Mapping
 		nodemapping.NeighborGreedy_P(this.topoSite);
 		
 		//Load vLink requirement
-		HashMap<String, ClusterDemand>clusterDemands = nodemapping.clusterDemands;
+		HashMap<String, ClusterRequest>CRs = nodemapping.CRs;
 		LinkedList<vLink> reqLinks= new LinkedList<>();
-		for(ClusterDemand dm:clusterDemands.values()) {
-			LinkedList<vLink>vLinks=dm.vLinks;
+		for(ClusterRequest cr:CRs.values()) {
+			LinkedList<vLink>vLinks=cr.vLinks;
 			reqLinks.addAll(vLinks);
 		}
 		double nvLinks=reqLinks.size();
@@ -83,17 +82,17 @@ public class MVP_Algorithm {
 		return eva;
 	}
 	
-	public Evaluation Mapping_RandomFit_P(JSONObject graph, JSONObject demand) {
-		initial(graph, demand);
+	public Evaluation Mapping_RandomFit_P(JSONObject graph, JSONObject clusterRequest) {
+		initial(graph, clusterRequest);
 		
 		//Node Mapping
 		nodemapping.RF_P(this.topoSite);
 		
 		//Load vLink requirement
-		HashMap<String, ClusterDemand>clusterDemands = nodemapping.clusterDemands;
+		HashMap<String, ClusterRequest>CRs = nodemapping.CRs;
 		LinkedList<vLink> reqLinks= new LinkedList<>();
-		for(ClusterDemand dm:clusterDemands.values()) {
-			LinkedList<vLink>vLinks=dm.vLinks;
+		for(ClusterRequest cr:CRs.values()) {
+			LinkedList<vLink>vLinks=cr.vLinks;
 			reqLinks.addAll(vLinks);
 		}
 		double nvLinks=reqLinks.size();

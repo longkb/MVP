@@ -23,8 +23,8 @@ import org.json.simple.parser.ParseException;
 public class ResourceManager {
 	//Parameters
 	public int nNodes;
-	public int maxDemand;
-	public int minDemand;
+	public int maxRequestRatio;
+	public int minRequestRatio;
 	public Double alpha;
 	public Double beta;
 	public String dir = "";
@@ -37,20 +37,20 @@ public class ResourceManager {
 	public static double N=1, M=1; //Hệ số để tính load từ Cap và BW
 	
 	
-	public ResourceManager(int nNodes, double alpha, double beta, int maxDemand, int minDemand) {
+	public ResourceManager(int nNodes, double alpha, double beta, int maxRequestRatio, int minRequestRatio) {
 		rand = new Random();
 		this.nNodes = nNodes;
 		this.alpha = alpha;
 		this.beta = beta;
-		this.maxDemand = maxDemand;
-		this.minDemand = minDemand;
+		this.maxRequestRatio = maxRequestRatio;
+		this.minRequestRatio = minRequestRatio;
 	}
 	
 	public ResourceManager() {
 		
 	}
-	public void setMinDemand(int minDemand) {
-		this.minDemand = minDemand;
+	public void setMinRequestRatio(int minRequestRatio) {
+		this.minRequestRatio = minRequestRatio;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -99,10 +99,10 @@ public class ResourceManager {
 	}
 	public int i=0;
 	@SuppressWarnings({ "unchecked", "unused" })
-	public JSONObject createClusterDemand(JSONObject graph){
+	public JSONObject createClusterRequest(JSONObject graph){
 		JSONObject CRs=new JSONObject(); //The list of incomming Cluster Requests
 		
-		targetLoad=(double)minDemand/100;
+		targetLoad=(double)minRequestRatio/100;
 		int crCounter=0;
 		int nCR=nNodes;
 		double reqX, reqY;
@@ -111,12 +111,12 @@ public class ResourceManager {
 		tempLoad=0;
 		while (true) {
 			crCounter+=1;
-			String crName="R"+String.valueOf(crCounter);
+			String crID="R"+String.valueOf(crCounter);
 			//Tạo JSON để lưu cluster request từ client
 			JSONObject clusterJSON=new JSONObject();
-			clusterJSON.put("Name", crName);
-			String crID = String.valueOf(1+rand.nextInt(nCR));
 			clusterJSON.put("ID", crID);
+			String crName = String.valueOf(1+rand.nextInt(nCR));
+			clusterJSON.put("Name", crName);
 			
 			//Random tọa độ yêu cầu
 			reqX=((double)rand.nextInt((int) (WaxmanGenerator.xmax*1000)))/1000;
@@ -129,14 +129,14 @@ public class ResourceManager {
 			clusterJSON.put("Configuration", configJSON);
 			
 			//Thêm clusterJSON vào list
-			CRs.put(crName, clusterJSON);
+			CRs.put(crID, clusterJSON);
 
-			if (genClusterDemand(crName, configJSON)) {
+			if (genClusterRequest(crID, configJSON)) {
 				break;
 			}
 			//Trường hợp số Active bằng 0. Xóa JSONObject của cluster vừa thêm vào
 			if(configJSON.get("Active")==null) {
-				CRs.remove(crName);
+				CRs.remove(crID);
 			}
 		}
 		double BWRatio=vLinkBWReq/totalBW;
@@ -149,16 +149,16 @@ public class ResourceManager {
 //		System.out.println("Cap ratio: "+ capRatio);
 //		System.out.println("Ratio: "+ (N*capRatio+M*BWRatio)/(N+M));
 		
-		writeToFile(CRs, dir+"clusterDemand.txt");
+		writeToFile(CRs, dir+"clusterRequest.txt");
 		return CRs;
 	}
 	public double getLoad(double clusterNodeReq,double clientBWReq){
 		return (N*clusterNodeReq/totalCap + M*clientBWReq/totalBW)/(N + M);
 	}
 	/*
-	 * Generate a new demand with specific Name
+	 * Generate a new request with specific Name
 	 */
-	public boolean genClusterDemand(String clusterName, JSONObject configurationJSON){
+	public boolean genClusterRequest(String clusterName, JSONObject configurationJSON){
 
 		//Ngưỡng để random số active, standby node
 		int upTh_nNodes=3;
@@ -178,8 +178,8 @@ public class ResourceManager {
 		nActive=rand.nextInt(upTh_nNodes)+1;
 		nStandby=1;
 
-		tempLoad=getLoad(nodeCapReq, vLinkBWReq); //tính Load trước khi sinh demand
-		//Nếu độ chênh lệch của load hiện tại và load đặt ra quá nhỏ, bỏ qua, ko cần tạo thêm demand nữa
+		tempLoad=getLoad(nodeCapReq, vLinkBWReq); //tính Load trước khi sinh request
+		//Nếu độ chênh lệch của load hiện tại và load đặt ra quá nhỏ, bỏ qua, ko cần tạo thêm request nữa
 		if(targetLoad-tempLoad <= 0.01){ 
 			return true;
 		}
@@ -190,13 +190,13 @@ public class ResourceManager {
 		double nodeCap=getRandomNodeCapacity(upReqCapTh, dwReqCapTh); //Sinh random capacity request cho các node trong cluster
 		nodeCapReq+=(1+nStandby)*nActive*nodeCap; 
 		
-		newLoad=getLoad(nodeCapReq,vLinkBWReq);  //Load sau khi sinh demand
-		//Nếu load mới bằng load đặt ra, thêm demand thành công
+		newLoad=getLoad(nodeCapReq,vLinkBWReq);  //Load sau khi sinh request
+		//Nếu load mới bằng load đặt ra, thêm request thành công
 		if(newLoad<=targetLoad && newLoad >= targetLoad-0.01){ 
-			addNewDemand(configurationJSON, nActive, nStandby, nodeCap, syncBW);
+			addNewCR(configurationJSON, nActive, nStandby, nodeCap, syncBW);
 			return true;
 		}
-		//Nếu load mới lớn hơn load đặt ra, loại bỏ demand vừa rồi. Update lại load cũ bằng cách thêm 1 lượng BW vào các req BW
+		//Nếu load mới lớn hơn load đặt ra, loại bỏ request vừa rồi. Update lại load cũ bằng cách thêm 1 lượng BW vào các req BW
 		i=0;
 		if (newLoad > targetLoad) {
 			vLinkBWReq=vLinkBWReq-syncBW*nActive;
@@ -229,7 +229,7 @@ public class ResourceManager {
 				nodeCapReq+=(1+nStandby)*nActive*nodeCap; 
 				
 				if (syncBW>0 && syncBW<=upReqBWTh) {
-					addNewDemand(configurationJSON, nActive, nStandby, nodeCap, syncBW);
+					addNewCR(configurationJSON, nActive, nStandby, nodeCap, syncBW);
 					return true;
 				}else {
 					i++;
@@ -239,7 +239,7 @@ public class ResourceManager {
 			}
 			return true;
 		}
-		addNewDemand(configurationJSON, nActive, nStandby, nodeCap, syncBW);
+		addNewCR(configurationJSON, nActive, nStandby, nodeCap, syncBW);
 		return false;
 	}
 	/*
@@ -255,7 +255,7 @@ public class ResourceManager {
 		return (rand.nextInt(upTh-dwTh)/10+dwTh/10)*10;
 	}
 	@SuppressWarnings("unchecked")
-	public void addNewDemand(JSONObject configJSON, int nActive, int nStandby, double nodeCap, double syncBW){
+	public void addNewCR(JSONObject configJSON, int nActive, int nStandby, double nodeCap, double syncBW){
 		configJSON.put("Active", nActive);
 		configJSON.put("Standby", nStandby);
 		configJSON.put("reqCapacity", nodeCap);
@@ -372,13 +372,13 @@ public class ResourceManager {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void loadDemandFromJSON(TopoSite topoSite) {
+	public void loadCRsFromJSON(TopoSite topoSite) {
 		JSONParser parser = new JSONParser();
-		JSONObject demand=null;
+		JSONObject cr=null;
 		try {
 			Object obj = parser.parse(new FileReader(
-			        "clusterDemand.txt"));
-			demand = (JSONObject) obj;
+			        "clusterRequest.txt"));
+			cr = (JSONObject) obj;
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -387,15 +387,15 @@ public class ResourceManager {
 			e.printStackTrace();
 		}
 		
-		HashMap<String, ClusterDemand> reqClusterList = new HashMap<String, ClusterDemand>();
+		HashMap<String, ClusterRequest> reqClusterList = new HashMap<String, ClusterRequest>();
 		
-		Iterator<JSONObject> iter = demand.values().iterator();
+		Iterator<JSONObject> iter = cr.values().iterator();
 		JSONObject reqClusterJSON, configJSON;
-		ClusterDemand reqCluster;
+		ClusterRequest reqCluster;
 		while (iter.hasNext()) {
 			reqClusterJSON = iter.next();
-			String name = (String) reqClusterJSON.get("Name");
 			String crID = (String) reqClusterJSON.get("ID");
+			String crName = (String) reqClusterJSON.get("Name");
 
 			// Get cluster config
 			configJSON = (JSONObject) reqClusterJSON.get("Configuration");
@@ -406,8 +406,8 @@ public class ResourceManager {
 				int nStandby = n.intValue();
 				double syncBW = (double) configJSON.get("syncBW");
 				double reqCap = (double) configJSON.get("reqCapacity");
-				reqCluster = new ClusterDemand(crID, name, nActive, nStandby, reqCap, syncBW);
-				reqClusterList.put(name, reqCluster);
+				reqCluster = new ClusterRequest(crName, crID, nActive, nStandby, reqCap, syncBW);
+				reqClusterList.put(crID, reqCluster);
 			} catch (NullPointerException e) {
 			}
 		}

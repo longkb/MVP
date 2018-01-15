@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import multisite.cluster.model.CloudSite;
-import multisite.cluster.model.ClusterDemand;
+import multisite.cluster.model.ClusterRequest;
 import multisite.cluster.model.ClusterNode;
 import multisite.cluster.model.Link;
 import multisite.cluster.model.TopoSite;
@@ -16,7 +16,7 @@ import multisite.cluster.model.TopoSite;
 public class NodeMapping{
 	public HashMap<String, CloudSite> sites;
 	public HashMap<String, Link> links;
-	public HashMap<String, ClusterDemand> clusterDemands;
+	public HashMap<String, ClusterRequest> CRs;
 	public HashMap<String,ClusterNode> clusterNodes;
 
 	public NodeMapping() {
@@ -29,15 +29,16 @@ public class NodeMapping{
 	 */
 	public void HLB_P(TopoSite topoSite) {
 //		System.out.println("\nHLB-P Node mapping");
+		//Get inputs
 		this.sites = topoSite.getSites();
 		this.links = topoSite.getLinks();
-		this.clusterDemands = topoSite.getReqClusterList();
+		this.CRs = topoSite.getCRs();
 		
-		HashMap<String, CloudSite> sortedSites = sort_Site_NeiDec_CapUInc(this.sites);
-		this.clusterNodes = getClusterNodes(this.clusterDemands);
+		HashMap<String, CloudSite> sortedSites = sort_by_NeiDec_CapUInc(this.sites);
+		this.clusterNodes = getClusterNodes(this.CRs);
 		HashMap<String, ClusterNode> sortedReqNodes= sort_ClusterNode_NeiDec_RankDec(this.clusterNodes); //Sort by NeiDec_RankDec
-		HashMap<String, ClusterNode> filtedReqNodes= filterByClusterID(sortedReqNodes);  //Filtered by ClusterID
-		mapvNode_HLB_P(sortedSites, filtedReqNodes);
+		HashMap<String, ClusterNode> collectedReqNodes= collectNodeByClusterID(sortedReqNodes);  //Filtered by ClusterID
+		mapvNode_HLB_P(sortedSites, collectedReqNodes);
 	}
 	
 	/**
@@ -48,10 +49,10 @@ public class NodeMapping{
 //		System.out.println("\nNeighbor Greedy nodemapping");
 		this.sites = topoSite.getSites();
 		this.links = topoSite.getLinks();
-		this.clusterDemands = topoSite.getReqClusterList();
+		this.CRs = topoSite.getCRs();
 		
-		HashMap<String, CloudSite> sortedSites = sort_Site_NeiDec_CapUInc(this.sites);
-		this.clusterNodes = getClusterNodes(this.clusterDemands);
+		HashMap<String, CloudSite> sortedSites = sort_by_NeiDec_CapUInc(this.sites);
+		this.clusterNodes = getClusterNodes(this.CRs);
 		HashMap<String, ClusterNode> sortedReqNodes= sort_ClusterNode_NeiDec_RankDec(this.clusterNodes);
 		mapvNodeByNeighborAPAN(sortedSites, sortedReqNodes);
 	}
@@ -63,44 +64,41 @@ public class NodeMapping{
 //		System.out.println("\nRandom Fit Node mapping");
 		this.sites = topoSite.getSites();
 		this.links = topoSite.getLinks();
-		this.clusterDemands = topoSite.getReqClusterList();
+		this.CRs = topoSite.getCRs();
 		
-		this.clusterNodes = getClusterNodes(this.clusterDemands);
+		this.clusterNodes = getClusterNodes(this.CRs);
 		randomFitNodeMapping(this.sites, this.clusterNodes);
 	}
-	public HashMap<String,ClusterNode> filterByClusterID(HashMap<String, ClusterNode> clusterNodes){
-		HashMap<String,ClusterNode> filterNodes = new LinkedHashMap<>();
+	public HashMap<String,ClusterNode> collectNodeByClusterID(HashMap<String, ClusterNode> clusterNodes){
+		HashMap<String,ClusterNode> collectedNodes = new LinkedHashMap<>();
 		for(ClusterNode node: clusterNodes.values()) {
-			String currentClusterID = node.clusterID;
-			filterNodes.putIfAbsent(node.nodeID_clusterID, node);
+			String currentCRID = node.crID;
+			collectedNodes.putIfAbsent(node.nodeID_crID, node);
 			
 			for(ClusterNode nodev2: clusterNodes.values()) {
-				if(nodev2.clusterID.equals(currentClusterID)) {
-					filterNodes.putIfAbsent(nodev2.nodeID_clusterID, nodev2);
-				}
+				if(nodev2.crID.equals(currentCRID))
+					collectedNodes.putIfAbsent(nodev2.nodeID_crID, nodev2);
 			}
 		}
-		return filterNodes;
+		return collectedNodes;
 	}
 	/**
 	 * HLB-P Node Mapping 
 	 */
 	public void mapvNode_HLB_P(HashMap<String, CloudSite> sites, HashMap<String, ClusterNode> clusterNodes) {
-		String nodeID_clusterID;
-		//Turn on the first node
+		//Let's pop the first site
 		for(CloudSite site: sites.values()){
 			site.isUsed=true;
 			break;
 		}
 		for(ClusterNode reqNode: clusterNodes.values()) {
-			nodeID_clusterID = reqNode.nodeID+"_"+reqNode.clusterID;
 			boolean canUse;
 			//Resort cloud sites
-			sites=sort_Site_NeiDec_CapUInc(this.sites); 
+			sites=sort_by_NeiDec_CapUInc(this.sites); 
 			for(CloudSite site:sites.values()) {
 				canUse=true;
 				for(ClusterNode mNode:site.mNodes.values()) {
-					if(mNode.neiList.keySet().contains(nodeID_clusterID))
+					if(mNode.neiList.keySet().contains(reqNode.nodeID_crID))
 						canUse=false;
 				}
 				//If the current site is not using now
@@ -118,7 +116,7 @@ public class NodeMapping{
 				//If total bandwidth requirement is bigger than total site resource
 				if(!canUse)
 					continue;
-				if(site.mNodes.values().contains(nodeID_clusterID)==false && site.avaiCap>=reqNode.reqCap) {
+				if(site.mNodes.values().contains(reqNode.nodeID_crID)==false && site.avaiCap>=reqNode.reqCap) {
 					boolean hasNeighbour = false;
 					for(String nei:reqNode.neiList.keySet()) {
 						if(site.mNodes.keySet().contains(nei)) {
@@ -143,19 +141,17 @@ public class NodeMapping{
 	 * Neighbour Node mapping algorithms
 	 */
 	public void mapvNodeByNeighborAPAN(HashMap<String, CloudSite> sites, HashMap<String, ClusterNode> clusterNodes) {
-		String nodeID_clusterID;
 		//Turn on the first node
 		for(CloudSite site: sites.values()){
 			site.isUsed=true;
 			break;
 		}
 		for(ClusterNode reqNode: clusterNodes.values()) {
-			nodeID_clusterID = reqNode.nodeID+"_"+reqNode.clusterID;
 			boolean canUse;
 			for(CloudSite site:sites.values()) {
 				canUse=true;
 				for(ClusterNode mNode:site.mNodes.values()) {
-					if(mNode.neiList.keySet().contains(nodeID_clusterID))
+					if(mNode.neiList.keySet().contains(reqNode.nodeID_crID))
 						canUse=false;
 				}
 				//If the current site is not using now
@@ -173,7 +169,7 @@ public class NodeMapping{
 				//If total bandwidth requirement is bigger than total site resource
 				if(!canUse)
 					continue;
-				if(site.mNodes.values().contains(nodeID_clusterID)==false && site.avaiCap>=reqNode.reqCap) {
+				if(site.mNodes.values().contains(reqNode.nodeID_crID)==false && site.avaiCap>=reqNode.reqCap) {
 					boolean hasNeighbour = false;
 					for(String nei:reqNode.neiList.keySet()) {
 						if(site.mNodes.keySet().contains(nei)) {
@@ -190,39 +186,42 @@ public class NodeMapping{
 	}
 
 	/**
-	 * Get vNode from Demand
+	 * Get vNode from cluster request
 	 */
-	public HashMap<String, ClusterNode> getClusterNodes(HashMap<String, ClusterDemand> clusterDemands) {
+	public HashMap<String, ClusterNode> getClusterNodes(HashMap<String, ClusterRequest> CRs) {
 		HashMap<String, ClusterNode> nodeList = new HashMap<String, ClusterNode>();
-		for (String clusterID: clusterDemands.keySet()) {
-			ClusterDemand demand = clusterDemands.get(clusterID);
-			double reqCap = demand.getReqCap();
-			double syncBW = demand.getSyncBW();
-			int nActive = demand.getnActive();
+		for (String crID: CRs.keySet()) {
+			ClusterRequest cr = CRs.get(crID);
+			double reqCap = cr.getReqCap();
+			double syncBW = cr.getSyncBW();
+			String crName= cr.getName();
+			int nActive = cr.getnActive();
 			//Standby node
-			String nodeID = String.valueOf(1);
-			ClusterNode standbyNode = new ClusterNode(nodeID, reqCap*nActive, syncBW*nActive, "standby", clusterID);
-			demand.addClusterNode(standbyNode);
-			String nodeIDClusterID = nodeID+ "_"+ clusterID;
-			nodeList.put(nodeIDClusterID, standbyNode);
+			int nStandby = cr.getnStandby();
+			String nodeID = String.valueOf(nStandby);
+			
+			ClusterNode standbyNode = new ClusterNode(nodeID, reqCap*nActive, syncBW*nActive, ClusterNode.STANDBY, crID, crName);
+			cr.addClusterNode(standbyNode);
+			String node_ClusterID = nodeID+ "_"+ crID;
+			nodeList.put(node_ClusterID, standbyNode);
 			//List of Active Node
-			for(int i = 2; i <= nActive+1; i++) {
-				String id = String.valueOf(i);
-				ClusterNode node = new ClusterNode(id, reqCap, syncBW, "active", clusterID);
-				demand.addClusterNode(node);
-				node.addNeighbour(standbyNode);
-				nodeIDClusterID = id+ "_"+ clusterID;
-				nodeList.put(nodeIDClusterID, node);
+			for(int i = nStandby+1; i <= nActive+nStandby; i++) {
+				nodeID = String.valueOf(i);
+				ClusterNode activeNode = new ClusterNode(nodeID, reqCap, syncBW, ClusterNode.ACTIVE, crID, crName);
+				activeNode.addNeighbour(standbyNode);
+				cr.addClusterNode(activeNode);
+				node_ClusterID = nodeID+ "_"+ crID;
+				nodeList.put(node_ClusterID, activeNode);
 			}
 		}
 		//Calculate Rank for vNode
-		double totalRank=0;
+		double totalReqCap=0, totalReqBW=0;
 		for(ClusterNode reqNode:nodeList.values()){
-			reqNode.rank=reqNode.reqCap*reqNode.syncBW;
-			totalRank+=reqNode.rank;
+			totalReqCap+=reqNode.reqCap;
+			totalReqBW+=reqNode.syncBW;
 		}
 		for(ClusterNode reqNode:nodeList.values()){
-			reqNode.rank=reqNode.rank/totalRank;
+			reqNode.getNodeRank(totalReqCap, totalReqBW);
 		}
 		return nodeList;
 	}
@@ -230,21 +229,18 @@ public class NodeMapping{
 	 * Neighbour Node mapping algorithms
 	 */
 	public void randomFitNodeMapping(HashMap<String, CloudSite> sites, HashMap<String, ClusterNode> clusterNodes) {
-		String nodeID_clusterID;
-
 		for(ClusterNode reqNode: clusterNodes.values()) {
-			nodeID_clusterID = reqNode.nodeID+"_"+reqNode.clusterID;
 			boolean canTurnOn;
 			for(CloudSite site:sites.values()) {
 				canTurnOn=true;
 				for(ClusterNode mNode:site.mNodes.values()) {
-					if(mNode.neiList.keySet().contains(nodeID_clusterID))
+					if(mNode.neiList.keySet().contains(reqNode.nodeID_crID))
 						canTurnOn=false;
 				}
 				//If total bandwidth requirement is bigger than total site resource
 				if(!canTurnOn)
 					continue;
-				if(site.mNodes.values().contains(nodeID_clusterID)==false && site.avaiCap>=reqNode.reqCap) {
+				if(site.mNodes.values().contains(reqNode.nodeID_crID)==false && site.avaiCap>=reqNode.reqCap) {
 					boolean hasNeighbour = false;
 					for(String nei:reqNode.neiList.keySet()) {
 						if(site.mNodes.keySet().contains(nei)) {
@@ -263,7 +259,7 @@ public class NodeMapping{
 	 * Sắp xếp theo số hàng xóm giảm dần,Utilization tăng giảm dần
 	 * @param map
 	 */
-	public HashMap<String, CloudSite> sort_Site_NeiDec_CapUInc(HashMap<String, CloudSite> sites) {
+	public HashMap<String, CloudSite> sort_by_NeiDec_CapUInc(HashMap<String, CloudSite> sites) {
 		List<Map.Entry<String, CloudSite>> list = new LinkedList<>(
 				sites.entrySet());
 		Collections.sort(list,new Comparator<Map.Entry<String, CloudSite>>() {
@@ -276,10 +272,10 @@ public class NodeMapping{
 					}
 				});
 		HashMap<String, CloudSite>sortedSites = new LinkedHashMap<>();
-//		System.out.print("\nSorted cloud sites:   ");
+		System.out.print("\nSorted cloud sites:   ");
 		for (Map.Entry<String, CloudSite> entry : list) {
 			sortedSites.put(entry.getKey(), entry.getValue());
-//			System.out.print(entry.getKey()+"("+entry.getValue().nNeighbour()+","+entry.getValue().utilization+")"+" ");
+			System.out.print(entry.getKey()+"("+entry.getValue().nNeighbour()+","+entry.getValue().capU+")"+" ");
 		}
 		return sortedSites;
 	}
@@ -311,7 +307,7 @@ public class NodeMapping{
 	
 	       
 	/**
-	 * Sort required Cluster Node by nNeighbors descending
+	 * Sort required Cluster Node by nNeighbors descending, rank increasing
 	 * 
 	 * @param map
 	 */
@@ -330,10 +326,10 @@ public class NodeMapping{
 				});
 
 		HashMap<String, ClusterNode>sortedNodes = new LinkedHashMap<>();
-//		System.out.print("\n\nSorted cluster nodes: ");
+		System.out.print("\n\nSorted cluster nodes: ");
 		for (Map.Entry<String, ClusterNode> entry : list) {
 			sortedNodes.put(entry.getKey(), entry.getValue());
-//			System.out.print(entry.getKey()+"("+String.valueOf(entry.getValue().getNNeighbour())+")"+" ");
+			System.out.print(entry.getKey()+"("+String.valueOf(entry.getValue().getNNeighbour())+")"+" ");
 		}
 		return sortedNodes;
 	}

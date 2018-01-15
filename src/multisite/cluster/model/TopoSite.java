@@ -8,7 +8,7 @@ import java.util.Map;
 public class TopoSite {
 	public HashMap<String, CloudSite> sites;
 	public HashMap<String, Link> links;
-	public HashMap<String, ClusterDemand> reqClusterList;
+	public HashMap<String, ClusterRequest> reqClusterList;
 	private Map<String, LinkedHashSet<String>> routingMap;
 	public LinkedList<String> forgetLink;
 
@@ -26,7 +26,7 @@ public class TopoSite {
 	public HashMap<String, Link> getLinks() {
 		return links;
 	}
-	public HashMap<String, ClusterDemand> getReqClusterList() {
+	public HashMap<String, ClusterRequest> getCRs() {
 		return reqClusterList;
 	}
 	

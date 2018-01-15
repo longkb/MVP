@@ -7,7 +7,7 @@ import multisite.cluster.model.ResourceManager;
 
 public class Mapping {
 	JSONObject graph; //Multi-site topo
-	JSONObject clusterDemand;
+	JSONObject clusterRequest;
 	
 	// Algorithms objects
 	private MVP_Algorithm MVP_obj;
@@ -15,7 +15,7 @@ public class Mapping {
 	
 	public Mapping() {
 		this.graph =new JSONObject();
-		this.clusterDemand = new JSONObject();
+		this.clusterRequest = new JSONObject();
 		ave_HLB_eval= new Evaluation();
 		ave_NeiHEE_eval= new Evaluation();
 		ave_RF_eval= new Evaluation(); 
@@ -26,28 +26,28 @@ public class Mapping {
 	 * 
 	 * @param args
 	 */
-	public void map(int nNodes, int maxDemand, int minDemand, double alpha, double beta, int nTime) {
+	public void map(int nNodes, int maxRequestRatio, int minRequestRatio, double alpha, double beta, int nTime) {
 		ResourceManager generator;
-		for (int ratio = minDemand; ratio <= maxDemand; ratio = ratio + 10) {
-			generator = new ResourceManager(nNodes, alpha, beta, maxDemand, ratio);
+		for (int ratio = minRequestRatio; ratio <= maxRequestRatio; ratio = ratio + 10) {
+			generator = new ResourceManager(nNodes, alpha, beta, maxRequestRatio, ratio);
 			
 			//Reset all previous results
 			ave_HLB_eval.reset();
 			ave_NeiHEE_eval.reset();
 			ave_RF_eval.reset();
 			
-			System.out.println("Traffic Demand Ratio: " + ratio);
+			System.out.println("Incomming Request Ratio: " + ratio);
 			for (int i = 0; i < nTime; i++) {
-				//Run nTime mapping demand on topology
+				//Run nTime mapping request on topology
 				System.out.print("" + i);
 				Mapping mapping = new Mapping();
 				graph=generator.createMultiSiteTopo();
-				clusterDemand=generator.createClusterDemand(graph); //Sinh demand theo demand ratio
+				clusterRequest=generator.createClusterRequest(graph); //Sinh request theo request ratio
 				System.out.print("-");
 
-				ave_HLB_eval.putInSum(mapping.runHLB_MVP(graph, clusterDemand));
-				ave_NeiHEE_eval.putInSum(mapping.runNeiHEE_MVP(graph, clusterDemand));
-//				ave_RF_eval.putInSum(mapping.runRF_MVP(graph, clusterDemand));
+				ave_HLB_eval.putInSum(mapping.runHLB_MVP(graph, clusterRequest));
+				ave_NeiHEE_eval.putInSum(mapping.runNeiHEE_MVP(graph, clusterRequest));
+//				ave_RF_eval.putInSum(mapping.runRF_MVP(graph, clusterRequest));
 			}
 			ave_HLB_eval.getAverageResult(nTime);
 			ave_HLB_eval.printOut();
@@ -62,36 +62,36 @@ public class Mapping {
 	/**
 	 * HLB-P
 	 * @param graph
-	 * @param clusterDemand
+	 * @param clusterRequest
 	 */
-	public Evaluation runHLB_MVP(JSONObject graph, JSONObject clusterDemand) {
+	public Evaluation runHLB_MVP(JSONObject graph, JSONObject clusterRequest) {
 		Evaluation eva=new Evaluation();
 		MVP_obj = new MVP_Algorithm();
-		eva = MVP_obj.Mapping_HLB_P(graph, clusterDemand);
+		eva = MVP_obj.Mapping_HLB_P(graph, clusterRequest);
 		ave_HLB_eval.putInSum(eva);
 		return eva;
 	}
 	/**
 	 * NeiHEE-P
 	 * @param graph
-	 * @param clusterDemand
+	 * @param clusterRequest
 	 */
-	public Evaluation runNeiHEE_MVP(JSONObject graph, JSONObject clusterDemand) {
+	public Evaluation runNeiHEE_MVP(JSONObject graph, JSONObject clusterRequest) {
 		Evaluation eva=new Evaluation();
 		MVP_obj = new MVP_Algorithm();
-		eva = MVP_obj.Mapping_NeiHEE_P(graph, clusterDemand);
+		eva = MVP_obj.Mapping_NeiHEE_P(graph, clusterRequest);
 		ave_NeiHEE_eval.putInSum(eva);
 		return eva;
 	}
 	/**
 	 * RandomFit-P
 	 * @param graph
-	 * @param clusterDemand
+	 * @param clusterRequest
 	 */
-	public Evaluation runRF_MVP(JSONObject graph, JSONObject clusterDemand) {
+	public Evaluation runRF_MVP(JSONObject graph, JSONObject clusterRequest) {
 		Evaluation eva=new Evaluation();
 		MVP_obj = new MVP_Algorithm();
-		eva = MVP_obj.Mapping_RandomFit_P(graph, clusterDemand);
+		eva = MVP_obj.Mapping_RandomFit_P(graph, clusterRequest);
 		return eva;
 	}
 }
