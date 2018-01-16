@@ -16,9 +16,9 @@ public class Mapping {
 	public Mapping() {
 		this.graph =new JSONObject();
 		this.clusterRequest = new JSONObject();
-		ave_HLB_eval= new Evaluation();
-		ave_NeiHEE_eval= new Evaluation();
-		ave_RF_eval= new Evaluation(); 
+		ave_HLB_eval= new Evaluation("HLB");
+		ave_NeiHEE_eval= new Evaluation("NeiHEE");
+		ave_RF_eval= new Evaluation("RF"); 
 	}
 
 	/**
@@ -35,7 +35,8 @@ public class Mapping {
 			ave_HLB_eval.reset();
 			ave_NeiHEE_eval.reset();
 			ave_RF_eval.reset();
-			
+
+			System.out.println("\n+++++++++++++++++++++++++++++++++");
 			System.out.println("Incomming Request Ratio: " + ratio);
 			for (int i = 0; i < nTime; i++) {
 				//Run nTime mapping request on topology
@@ -65,10 +66,8 @@ public class Mapping {
 	 * @param clusterRequest
 	 */
 	public Evaluation runHLB_MVP(JSONObject graph, JSONObject clusterRequest) {
-		Evaluation eva=new Evaluation();
 		MVP_obj = new MVP_Algorithm();
-		eva = MVP_obj.Mapping_HLB_P(graph, clusterRequest);
-		ave_HLB_eval.putInSum(eva);
+		Evaluation eva = MVP_obj.Mapping_HLB_P(graph, clusterRequest);
 		return eva;
 	}
 	/**
@@ -77,10 +76,8 @@ public class Mapping {
 	 * @param clusterRequest
 	 */
 	public Evaluation runNeiHEE_MVP(JSONObject graph, JSONObject clusterRequest) {
-		Evaluation eva=new Evaluation();
 		MVP_obj = new MVP_Algorithm();
-		eva = MVP_obj.Mapping_NeiHEE_P(graph, clusterRequest);
-		ave_NeiHEE_eval.putInSum(eva);
+		Evaluation eva = MVP_obj.Mapping_NeiHEE_P(graph, clusterRequest);
 		return eva;
 	}
 	/**
@@ -89,9 +86,8 @@ public class Mapping {
 	 * @param clusterRequest
 	 */
 	public Evaluation runRF_MVP(JSONObject graph, JSONObject clusterRequest) {
-		Evaluation eva=new Evaluation();
 		MVP_obj = new MVP_Algorithm();
-		eva = MVP_obj.Mapping_RandomFit_P(graph, clusterRequest);
+		Evaluation eva = MVP_obj.Mapping_RandomFit_P(graph, clusterRequest);
 		return eva;
 	}
 }

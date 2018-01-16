@@ -7,7 +7,16 @@ public class Evaluation {
 	public double nVNFperSite;
 	public double aceptanceRatio;
 	public double max_utilization;
+	public String algorithmName;
 	
+	public Evaluation(String algorithmName) {
+		averageNodeUtilization=0;
+		nUsedSite=0;
+		nVNFperSite=0;
+		aceptanceRatio=0;
+		max_utilization=0;
+		this.algorithmName=algorithmName;
+	}
 	public Evaluation() {
 		averageNodeUtilization=0;
 		nUsedSite=0;
@@ -24,20 +33,19 @@ public class Evaluation {
 	}
 	public void printOut() {
 		//Print out
-//		System.out.println("\n=================================");
+//		System.out.println("\n================"+this.algorithmName+"================");
 //		System.out.println("Acceptance Ratio: "+ aceptanceRatio);
 //		System.out.println("Max Utilization: "+ max_utilization);
 //		System.out.println("Average Utilization: "+ averageNodeUtilization);
 //		System.out.println("N Used Sites: "+ nUsedSite);
 //		System.out.println("N VNFs per site: "+ nVNFperSite);
 		
-//		System.out.println("\n=================================");
-//		System.out.println("");
-//		System.out.println(aceptanceRatio);
-//		System.out.println(max_utilization);
-//		System.out.println(averageNodeUtilization);
-//		System.out.println(nUsedSite);
-//		System.out.println(nVNFperSite);
+		System.out.println("\n================"+this.algorithmName+"================");
+		System.out.println(aceptanceRatio);
+		System.out.println(max_utilization);
+		System.out.println(averageNodeUtilization);
+		System.out.println(nUsedSite);
+		System.out.println(nVNFperSite);
 	}
 	
 	public void putInSum(Evaluation eva) {

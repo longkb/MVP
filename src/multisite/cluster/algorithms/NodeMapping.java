@@ -51,7 +51,7 @@ public class NodeMapping{
 		this.links = topoSite.getLinks();
 		this.CRs = topoSite.getCRs();
 		
-		HashMap<String, CloudSite> sortedSites = sort_by_NeiDec_CapUInc(this.sites);
+		HashMap<String, CloudSite> sortedSites = sort_Site_NeiDec_AvaiDec(this.sites);
 		this.clusterNodes = getClusterNodes(this.CRs);
 		HashMap<String, ClusterNode> sortedReqNodes= sort_ClusterNode_NeiDec_RankDec(this.clusterNodes);
 		mapvNodeByNeighborAPAN(sortedSites, sortedReqNodes);
@@ -64,9 +64,10 @@ public class NodeMapping{
 //		System.out.println("\nRandom Fit Node mapping");
 		this.sites = topoSite.getSites();
 		this.links = topoSite.getLinks();
-		this.CRs = topoSite.getCRs();
 		
+		this.CRs = topoSite.getCRs();
 		this.clusterNodes = getClusterNodes(this.CRs);
+		
 		randomFitNodeMapping(this.sites, this.clusterNodes);
 	}
 	public HashMap<String,ClusterNode> collectNodeByClusterID(HashMap<String, ClusterNode> clusterNodes){
@@ -130,11 +131,11 @@ public class NodeMapping{
 				}
 			}
 		}
-		System.out.println("\n\nMapped nodes");
-		for(CloudSite s : sites.values()) {
-			System.out.println("Site "+s.ID+": "+s.mNodes.keySet());
-			System.out.println("Avai capacity: "+ s.avaiCap);
-		}
+//		System.out.println("\n\nMapped nodes");
+//		for(CloudSite s : sites.values()) {
+//			System.out.println("Site "+s.ID+": "+s.mNodes.keySet());
+//			System.out.println("Avai capacity: "+ s.avaiCap);
+//		}
 	}
 
 	/**
@@ -238,7 +239,6 @@ public class NodeMapping{
 					if(mNode.neiList.containsKey(reqNode.nodeID_crID))
 						canTurnOn=false;
 				}
-				//If total bandwidth requirement is bigger than total site resource
 				if(!canTurnOn)
 					continue;
 				if(site.mNodes.containsKey(reqNode.nodeID_crID)==false && site.avaiCap>=reqNode.reqCap) {
@@ -274,10 +274,10 @@ public class NodeMapping{
 					}
 				});
 		HashMap<String, CloudSite>sortedSites = new LinkedHashMap<>();
-		System.out.print("\nSorted cloud sites:   ");
+//		System.out.print("\nSorted cloud sites:   ");
 		for (Map.Entry<String, CloudSite> entry : list) {
 			sortedSites.put(entry.getKey(), entry.getValue());
-			System.out.print(entry.getKey()+"("+entry.getValue().nNeighbour()+","+entry.getValue().capU+")"+" ");
+//			System.out.print(entry.getKey()+"("+entry.getValue().nNeighbour()+","+entry.getValue().capU+")"+" ");
 		}
 		return sortedSites;
 	}
@@ -328,10 +328,10 @@ public class NodeMapping{
 				});
 
 		HashMap<String, ClusterNode>sortedNodes = new LinkedHashMap<>();
-		System.out.print("\n\nSorted cluster nodes: ");
+//		System.out.print("\n\nSorted cluster nodes: ");
 		for (Map.Entry<String, ClusterNode> entry : list) {
 			sortedNodes.put(entry.getKey(), entry.getValue());
-			System.out.print(entry.getKey()+"("+String.valueOf(entry.getValue().getNNeighbour())+")"+" ");
+//			System.out.print(entry.getKey()+"("+String.valueOf(entry.getValue().getNNeighbour())+")"+" ");
 		}
 		return sortedNodes;
 	}

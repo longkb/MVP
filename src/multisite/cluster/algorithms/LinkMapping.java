@@ -22,7 +22,7 @@ public class LinkMapping {
 		
 	}
 	public MappingResult BFSLinkMapping(TopoSite topoSite, LinkedList<vLink> reqLinks, MappingResult mappingResult) {
-
+//		System.out.println("BFS-based Link Mapping");
 		//Link Mapping		
 		while(reqLinks.size()!=0) {
 			vLink vlink=reqLinks.pop();

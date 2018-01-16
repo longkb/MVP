@@ -32,6 +32,13 @@ public class ResourceManager {
 	private double targetLoad,tempLoad;
 	private double totalCap,totalBW;
 	private double nodeCapReq,vLinkBWReq;
+	
+	//Ngưỡng để random số active, standby node
+	private int upTh_nNodes=3;
+	private int upReqCapTh=30;
+	private int dwReqCapTh=10;
+	private int upReqBWTh=40; 
+	private int dwReqBWTh=20;
 
 	private Random rand;
 	public static double N=1, M=1; //Hệ số để tính load từ Cap và BW
@@ -160,12 +167,6 @@ public class ResourceManager {
 	 */
 	public boolean genClusterRequest(String clusterName, JSONObject configurationJSON){
 
-		//Ngưỡng để random số active, standby node
-		int upTh_nNodes=3;
-		int upReqCapTh=50;
-		int dwReqCapTh=10;
-		int upReqBWTh=70; 
-		int dwReqBWTh=30;
 		int nActive;
 		int nStandby;
 		double newLoad;
