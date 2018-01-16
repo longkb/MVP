@@ -1,1 +1,1 @@
-{"R2":{"Configuration":{"Active":3,"syncBW":10.0,"Standby":1,"reqCapacity":40.0},"ID":"R2","reqY":196.285,"Name":"2","reqX":578.886},"R1":{"Configuration":{"Active":2,"syncBW":40.0,"Standby":1,"reqCapacity":30.0},"ID":"R1","reqY":970.745,"Name":"4","reqX":662.212}}
+{"R2":{"Configuration":{"Active":1,"syncBW":50.0,"Standby":1,"reqCapacity":40.0},"ID":"R2","reqY":352.708,"Name":"2","reqX":90.415},"R1":{"Configuration":{"Active":3,"syncBW":50.0,"Standby":1,"reqCapacity":20.0},"ID":"R1","reqY":551.181,"Name":"3","reqX":577.956}}

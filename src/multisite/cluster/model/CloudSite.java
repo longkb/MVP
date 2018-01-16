@@ -60,20 +60,18 @@ public class CloudSite {
 		this.avaiLinkBW=this.totalBWResource;
 	}
 	public void mapClusterNode(ClusterNode mappedNode) {
-		String nodeID_clusterID= mappedNode.nodeID+"_"+mappedNode.crID;
-		this.mNodes.put(nodeID_clusterID, mappedNode);
+		this.mNodes.put(mappedNode.nodeID_crID, mappedNode);
 		this.avaiCap -= mappedNode.reqCap;
 		this.capU = getResouceUtilization(this.capacity, this.avaiCap);
 		this.avaiLinkBW = this.avaiLinkBW - mappedNode.syncBW;
 		mappedNode.setLocatedCloudSite(this);
 	}
 	public void unmapClusterNode(ClusterNode unmapNode) {
-		String nodeID_clusterID= unmapNode.nodeID+"_"+unmapNode.crID;
-		unmapNode.unsetLocatedCloudSite(this);
-		this.mNodes.remove(nodeID_clusterID, unmapNode);
+		this.mNodes.remove(unmapNode.nodeID_crID, unmapNode);
 		this.avaiCap += unmapNode.reqCap;
 		this.capU = getResouceUtilization(this.capacity, this.avaiCap);
 		this.avaiLinkBW = this.avaiLinkBW + unmapNode.syncBW;
+		unmapNode.unsetLocatedCloudSite(this);
 	}
 	
 }

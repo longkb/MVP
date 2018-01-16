@@ -98,7 +98,7 @@ public class NodeMapping{
 			for(CloudSite site:sites.values()) {
 				canUse=true;
 				for(ClusterNode mNode:site.mNodes.values()) {
-					if(mNode.neiList.keySet().contains(reqNode.nodeID_crID))
+					if(mNode.neiList.containsKey(reqNode.nodeID_crID))
 						canUse=false;
 				}
 				//If the current site is not using now
@@ -113,14 +113,14 @@ public class NodeMapping{
 					if(!hasNeighborUsed)
 						canUse=false;
 				}
-				//If total bandwidth requirement is bigger than total site resource
 				if(!canUse)
 					continue;
-				if(site.mNodes.values().contains(reqNode.nodeID_crID)==false && site.avaiCap>=reqNode.reqCap) {
+				if(site.mNodes.containsKey(reqNode.nodeID_crID)==false && site.avaiCap>=reqNode.reqCap) {
 					boolean hasNeighbour = false;
-					for(String nei:reqNode.neiList.keySet()) {
-						if(site.mNodes.keySet().contains(nei)) {
+					for(String neiID:reqNode.neiList.keySet()) {
+						if(site.mNodes.containsKey(neiID)) {
 							hasNeighbour=true;
+							break;
 						}
 					}
 					if(hasNeighbour)
@@ -130,11 +130,11 @@ public class NodeMapping{
 				}
 			}
 		}
-//		System.out.println("\n\nMapped nodes");
-//		for(CloudSite s : sites.values()) {
-//			System.out.println("Site "+s.ID+": "+s.mNodes.keySet());
-//			System.out.println("Avai capacity: "+ s.avaiCap);
-//		}
+		System.out.println("\n\nMapped nodes");
+		for(CloudSite s : sites.values()) {
+			System.out.println("Site "+s.ID+": "+s.mNodes.keySet());
+			System.out.println("Avai capacity: "+ s.avaiCap);
+		}
 	}
 
 	/**
@@ -151,7 +151,7 @@ public class NodeMapping{
 			for(CloudSite site:sites.values()) {
 				canUse=true;
 				for(ClusterNode mNode:site.mNodes.values()) {
-					if(mNode.neiList.keySet().contains(reqNode.nodeID_crID))
+					if(mNode.neiList.containsKey(reqNode.nodeID_crID))
 						canUse=false;
 				}
 				//If the current site is not using now
@@ -169,11 +169,12 @@ public class NodeMapping{
 				//If total bandwidth requirement is bigger than total site resource
 				if(!canUse)
 					continue;
-				if(site.mNodes.values().contains(reqNode.nodeID_crID)==false && site.avaiCap>=reqNode.reqCap) {
+				if(site.mNodes.containsKey(reqNode.nodeID_crID)==false && site.avaiCap>=reqNode.reqCap) {
 					boolean hasNeighbour = false;
-					for(String nei:reqNode.neiList.keySet()) {
-						if(site.mNodes.keySet().contains(nei)) {
+					for(String neiID:reqNode.neiList.keySet()) {
+						if(site.mNodes.containsKey(neiID)) {
 							hasNeighbour=true;
+							break;
 						}
 					}
 					if(hasNeighbour)
@@ -226,7 +227,7 @@ public class NodeMapping{
 		return nodeList;
 	}
 	/**
-	 * Neighbour Node mapping algorithms
+	 * Random Node mapping algorithms
 	 */
 	public void randomFitNodeMapping(HashMap<String, CloudSite> sites, HashMap<String, ClusterNode> clusterNodes) {
 		for(ClusterNode reqNode: clusterNodes.values()) {
@@ -234,17 +235,18 @@ public class NodeMapping{
 			for(CloudSite site:sites.values()) {
 				canTurnOn=true;
 				for(ClusterNode mNode:site.mNodes.values()) {
-					if(mNode.neiList.keySet().contains(reqNode.nodeID_crID))
+					if(mNode.neiList.containsKey(reqNode.nodeID_crID))
 						canTurnOn=false;
 				}
 				//If total bandwidth requirement is bigger than total site resource
 				if(!canTurnOn)
 					continue;
-				if(site.mNodes.values().contains(reqNode.nodeID_crID)==false && site.avaiCap>=reqNode.reqCap) {
+				if(site.mNodes.containsKey(reqNode.nodeID_crID)==false && site.avaiCap>=reqNode.reqCap) {
 					boolean hasNeighbour = false;
-					for(String nei:reqNode.neiList.keySet()) {
-						if(site.mNodes.keySet().contains(nei)) {
+					for(String neiID:reqNode.neiList.keySet()) {
+						if(site.mNodes.containsKey(neiID)) {
 							hasNeighbour=true;
+							break;
 						}
 					}
 					if(hasNeighbour)

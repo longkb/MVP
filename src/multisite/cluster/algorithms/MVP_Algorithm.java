@@ -53,8 +53,8 @@ public class MVP_Algorithm {
 		double nvLinks=reqLinks.size();
 		//Link Mapping
 		LinkMapping LM = new LinkMapping();
-
 		MappingResult mappingResult = new MappingResult();
+		
 		mappingResult = LM.BFSLinkMapping(topoSite, reqLinks, mappingResult);
 		eva=performanceEvaluation(topoSite, nvLinks, mappingResult);
 		return eva;
